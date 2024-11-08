@@ -2,30 +2,50 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Diagnostics;
 using UnityEngine;
-using ArtExpander.Core;  // for FileNameToMonsterTypeResolver
+using UnityEngine.Profiling;
+using ArtExpander.Core;
 
-namespace ArtExpander.Core{
+namespace ArtExpander.Core
+{
     public class AnimatedGhostCache 
     {
         private readonly Dictionary<(EMonsterType, bool), Sprite[]> _animatedGhostCards = new();
+        private readonly Dictionary<string, PerformanceMetrics> _folderMetrics = new();
+
+        public class PerformanceMetrics
+        {
+            public long LoadTimeMs { get; set; }
+            public long MemoryUsageBytes { get; set; }
+            public int FrameCount { get; set; }
+            public string FolderName { get; set; }
+        }
+
+        public IReadOnlyDictionary<string, PerformanceMetrics> FolderMetrics => _folderMetrics;
 
         public bool TryGetAnimation(EMonsterType monsterType, bool isBlackGhost, out Sprite[] frames)
         {
-            Plugin.Logger.LogWarning($"Attempting to retrieve animated ghost for {monsterType},{isBlackGhost}");
             return _animatedGhostCards.TryGetValue((monsterType, isBlackGhost), out frames);
+        }
+
+        private long GetCurrentMemoryUsage()
+        {
+            return Profiler.GetTotalAllocatedMemoryLong();
         }
 
         public void LoadAnimatedFolder(string folderPath)
         {
             if (!Directory.Exists(folderPath)) return;
 
-            // Look for folders named like "PiggyA_frames" or "PiggyA_black_frames"
             var directories = Directory.GetDirectories(folderPath);
             
             foreach (var dir in directories)
             {
                 var dirName = Path.GetFileName(dir);
+                var stopwatch = Stopwatch.StartNew();
+                var initialMemory = GetCurrentMemoryUsage();
+
                 bool isBlackGhost = dirName.Contains("_black");
                 string monsterName = dirName.Replace("_black", "").Replace("_white","");
 
@@ -35,7 +55,6 @@ namespace ArtExpander.Core{
                     continue;
                 }
 
-                // Load all PNGs in numerical order
                 var frameFiles = Directory.GetFiles(dir, "*.png")
                     .OrderBy(f => int.Parse(Path.GetFileNameWithoutExtension(f)))
                     .ToArray();
@@ -63,9 +82,42 @@ namespace ArtExpander.Core{
                 if (frames.Count > 0)
                 {
                     _animatedGhostCards[(monsterType, isBlackGhost)] = frames.ToArray();
-                    Plugin.Logger.LogInfo($"Loaded {frames.Count} frames for {monsterType} (Black: {isBlackGhost})");
+                    
+                    stopwatch.Stop();
+                    var finalMemory = GetCurrentMemoryUsage();
+                    var memoryUsed = finalMemory - initialMemory;
+
+                    var metrics = new PerformanceMetrics
+                    {
+                        LoadTimeMs = stopwatch.ElapsedMilliseconds,
+                        MemoryUsageBytes = memoryUsed,
+                        FrameCount = frames.Count,
+                        FolderName = dirName
+                    };
+
+                    _folderMetrics[dirName] = metrics;
                 }
             }
+
+            // Log summary of all folders
+            //LogPerformanceSummary();
+        }
+
+        private void LogPerformanceSummary()
+        {
+            if (_folderMetrics.Count == 0) return;
+
+            var totalLoadTime = _folderMetrics.Values.Sum(m => m.LoadTimeMs);
+            var totalMemory = _folderMetrics.Values.Sum(m => m.MemoryUsageBytes);
+            var totalFrames = _folderMetrics.Values.Sum(m => m.FrameCount);
+
+            Plugin.Logger.LogInfo($"=== Animation Loading Performance Summary ===\n" +
+                $"Total Folders: {_folderMetrics.Count}\n" +
+                $"Total Load Time: {totalLoadTime}ms\n" +
+                $"Total Memory Usage: {totalMemory / 1024f / 1024f:F2}MB\n" +
+                $"Total Frames: {totalFrames}\n" +
+                $"Average Load Time per Folder: {totalLoadTime / _folderMetrics.Count:F2}ms\n" +
+                $"Average Memory per Frame: {(totalMemory / (float)totalFrames) / 1024f:F2}KB");
         }
 
         public void ClearCache()
@@ -81,6 +133,7 @@ namespace ArtExpander.Core{
                 }
             }
             _animatedGhostCards.Clear();
+            _folderMetrics.Clear();
         }
     }
 }
