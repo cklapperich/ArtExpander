@@ -14,7 +14,7 @@ namespace ArtExpander
     public class Plugin : BaseUnityPlugin
     {
 
-        internal static AnimatedGhostCache animated_ghost_cache = new AnimatedGhostCache();
+        //internal static AnimatedGhostCache animated_ghost_cache = new AnimatedGhostCache();
 
         internal static new ManualLogSource Logger;
         private readonly Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
@@ -27,9 +27,9 @@ namespace ArtExpander
             PluginPath = Path.GetDirectoryName(Info.Location);
             Logger.LogInfo($"Art Expander starting! Plugin path: {PluginPath}");
             
-            string animatedGhostPath = Path.Combine(finalArtPath, "Ghost", "animated");
-            animated_ghost_cache.LoadAnimatedFolder(animatedGhostPath);
-            
+            //string animatedGhostPath = Path.Combine(finalArtPath, "Ghost", "animated");
+            //animated_ghost_cache.LoadAnimatedFolder(animatedGhostPath);
+
             string cardArtPath = Path.Combine(PluginPath, "cardart");
             string baseArtPath = PluginPath;
             
