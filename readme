@@ -1,0 +1,32 @@
+Use TWO art expansions at once!
+
+have custom artwork for 1st edition or Full Art cards! and more!
+
+This mod allows for UNIQUE destiny artwork, plus unique artwork for EVERY border type: 
+	Base,
+	FirstEdition,
+	Silver,
+	Gold,
+	EX,
+	FullArt
+
+It also allows custom artwork for Destiny Cards separate from base cards. 
+
+How to structure your artwork:
+Destiny/Base/PiggyA.png
+Destiny/Gold/PiggyA.png
+Destiny/PiggyA.png
+all_expansions/Silver/PiggyA.png
+all_expansions/PiggyA.png
+
+The final example works but should be avoided: use a texture replacer instead for optimal performance here. The rest are fine.
+
+Any files not found will default to the texture replacer, then to the base game.
+
+Please name folders correctly.
+
+Only use this mod to:
+* Add border-specific artwork
+* Add artwork that applies to all destiny cards of a certain monster
+
+The game will load all of its own images first, then the images from ArtExpander after.

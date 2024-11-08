@@ -1,0 +1,6 @@
+references/*.*
+bin
+lib
+BepInEx
+obj
+ArtExpander.zip
