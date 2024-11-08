@@ -12,6 +12,7 @@ namespace ArtExpander.Core{
 
         public bool TryGetAnimation(EMonsterType monsterType, bool isBlackGhost, out Sprite[] frames)
         {
+            Plugin.Logger.LogWarning($"Attempting to retrieve animated ghost for {monsterType},{isBlackGhost}");
             return _animatedGhostCards.TryGetValue((monsterType, isBlackGhost), out frames);
         }
 
@@ -24,11 +25,9 @@ namespace ArtExpander.Core{
             
             foreach (var dir in directories)
             {
-                var dirName = Path.GetFileName(dir).ToLowerInvariant();
-                if (!dirName.EndsWith("_frames")) continue;
-
-                bool isBlackGhost = dirName.Contains("_black_");
-                string monsterName = dirName.Replace("_black_frames", "").Replace("_frames", "");
+                var dirName = Path.GetFileName(dir);
+                bool isBlackGhost = dirName.Contains("_black");
+                string monsterName = dirName.Replace("_black", "").Replace("_white","");
 
                 if (!FileNameToMonsterTypeResolver.TryResolveMonsterType(monsterName, out EMonsterType monsterType))
                 {
