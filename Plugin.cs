@@ -35,7 +35,7 @@ namespace ArtExpander
             Logger.LogInfo($"Using art path: {finalArtPath}");
 
             string animatedGhostPath = Path.Combine(finalArtPath, "Ghost", "animated");
-            animated_ghost_cache.LoadAnimatedFolder(animatedGhostPath);
+            animated_ghost_cache.ScanAnimationFolders(animatedGhostPath);
 
             art_cache.Initialize(finalArtPath);
             
