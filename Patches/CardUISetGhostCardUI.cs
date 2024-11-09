@@ -31,11 +31,11 @@ static void Postfix(CardUI __instance, MonsterData data, bool isBlackGhost)
 
         var mainImage = AccessTools.Field(typeof(CardUI), "m_MonsterImage").GetValue(ghostCard) as Image;
         var maskImage = AccessTools.Field(typeof(CardUI), "m_MonsterMaskImage").GetValue(ghostCard) as Image;
-        
+        var glowImage = AccessTools.Field(typeof(CardUI), "m_MonsterGlowMask").GetValue(ghostCard) as Image;
         if (mainImage == null || maskImage == null) return;
         
         var animator = ghostCard.gameObject.AddComponent<GhostCardAnimatedRenderer>();
-        animator.Initialize(mainImage, maskImage, frames);
+        animator.Initialize(mainImage, maskImage, glowImage, frames);
     }
 }
     }

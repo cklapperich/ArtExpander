@@ -1,29 +1,28 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
-using HarmonyLib;  // Add this for AccessTools
+using HarmonyLib;
 using ArtExpander.Patches;
 namespace ArtExpander.Core
 {
     public class GhostCardAnimatedRenderer : MonoBehaviour
     {
-        // Keep original fields
         private Image mainImage;
         private Image maskImage;
+        private Image glowImage;
         private Sprite[] frames;
         private Coroutine animationCoroutine;
         private float frameDelay = 0.1f;
-        // Add new field
         private CardUI parentCardUI;
         private bool wasAnimating = false;
 
-        public void Initialize(Image mainImage, Image maskImage, Sprite[] frames)
+        public void Initialize(Image mainImage, Image maskImage, Image glowImage, Sprite[] frames)
         {
             this.mainImage = mainImage;
             this.maskImage = maskImage;
+            this.glowImage = glowImage;  // Add glow mask
             this.frames = frames;
-            
-            // Get parent CardUI component
+                    
             parentCardUI = GetComponentInParent<CardUI>();
             
             StopAnimation();
@@ -51,24 +50,18 @@ namespace ArtExpander.Core
 
         private IEnumerator AnimateSprites()
         {
-            int currentFrame = 0;
-            Plugin.Logger.LogInfo("Animation started");
+            int currentFrame = 0;  // Add frame counter
             
-            while (true)
-            {
-                if (mainImage == null || maskImage == null || frames == null || frames.Length == 0)
-                {
-                    Plugin.Logger.LogWarning($"Animation failed - nulls detected:" +
-                        $"\nMain Image null: {mainImage == null}" +
-                        $"\nMask Image null: {maskImage == null}" +
-                        $"\nFrames null or empty: {frames == null || frames.Length == 0}");
-                    yield break;
-                }
-
+            while (true) {
                 mainImage.sprite = frames[currentFrame];
-                maskImage.sprite = frames[currentFrame];
-                currentFrame = (currentFrame + 1) % frames.Length;
                 
+                // Update all mask layers with the same frame
+                maskImage.sprite = frames[currentFrame];
+                if (glowImage != null) {
+                    glowImage.sprite = frames[currentFrame];
+                }
+                
+                currentFrame = (currentFrame + 1) % frames.Length;
                 yield return new WaitForSeconds(frameDelay);
             }
         }
@@ -79,12 +72,12 @@ namespace ArtExpander.Core
         
         wasAnimating = (animationCoroutine != null);
         
-        Plugin.Logger.LogWarning($"Animation OnDisable. State:" +
-            $"\nBorder Type: {borderType}" +
-            $"\nIs Destiny: {isDestiny}" +
-            $"\nIs Far Culled: {IsFarCulled()}" +
-            $"\nParent Active: {(parentCardUI != null ? parentCardUI.gameObject.activeInHierarchy : false)}" +
-            $"\nWas Animating: {wasAnimating}");
+        // Plugin.Logger.LogWarning($"Animation OnDisable. State:" +
+        //     $"\nBorder Type: {borderType}" +
+        //     $"\nIs Destiny: {isDestiny}" +
+        //     $"\nIs Far Culled: {IsFarCulled()}" +
+        //     $"\nParent Active: {(parentCardUI != null ? parentCardUI.gameObject.activeInHierarchy : false)}" +
+        //     $"\nWas Animating: {wasAnimating}");
         
         StopAnimation();
     }
@@ -92,12 +85,12 @@ namespace ArtExpander.Core
     private void OnEnable()
     {
         var (borderType, isDestiny) = CardUISetCardPatch.CardDataTracker.GetCurrentCardInfo();
-        Plugin.Logger.LogWarning($"Animation OnEnable. State:" +
-            $"\nBorder Type: {borderType}" +
-            $"\nIs Destiny: {isDestiny}" +
-            $"\nIs Far Culled: {IsFarCulled()}" +
-            $"\nParent Active: {(parentCardUI != null ? parentCardUI.gameObject.activeInHierarchy : false)}" +
-            $"\nWas Animating: {wasAnimating}");
+        // Plugin.Logger.LogWarning($"Animation OnEnable. State:" +
+        //     $"\nBorder Type: {borderType}" +
+        //     $"\nIs Destiny: {isDestiny}" +
+        //     $"\nIs Far Culled: {IsFarCulled()}" +
+        //     $"\nParent Active: {(parentCardUI != null ? parentCardUI.gameObject.activeInHierarchy : false)}" +
+        //     $"\nWas Animating: {wasAnimating}");
 
         if (wasAnimating)
         {
