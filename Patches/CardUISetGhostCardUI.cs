@@ -2,6 +2,7 @@ using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 using ArtExpander.Core;
+//TODO: ADD SUPPORT FOR UNITY ASYNC ASSET BUNDLE LOADING?
 
 namespace ArtExpander.Patches
 {
@@ -12,18 +13,11 @@ namespace ArtExpander.Patches
         [HarmonyPostfix]
         static void Postfix(CardUI __instance, MonsterData data, bool isBlackGhost)
         {
-            // Plugin.Logger.LogInfo($"=== SetGhostCardUI Called ===\n" +
-            //     $"Monster: {data.MonsterType}\n" +
-            //     $"Is Black Ghost: {isBlackGhost}\n" +
-            //     $"Card GameObject Active: {__instance.gameObject.activeInHierarchy}");
-
-            // Clean up first
+            // Clean up existing animators
             var ghostCard = AccessTools.Field(typeof(CardUI), "m_GhostCard").GetValue(__instance) as CardUI;
             if (ghostCard != null)
             {
                 var existingAnimators = ghostCard.GetComponents<GhostCardAnimatedRenderer>();
-                //Plugin.Logger.LogInfo($"Found {existingAnimators.Length} existing animators");
-                
                 foreach(var animator in existingAnimators)
                 {
                     animator.StopAnimation();
@@ -31,12 +25,18 @@ namespace ArtExpander.Patches
                 }
             }
 
-            // Then only add new animation if needed
-            if (Plugin.animated_ghost_cache.TryGetAnimation(data.MonsterType, isBlackGhost, out var frames))
+            // Use the appropriate ghost border type based on isBlackGhost
+            var borderType = isBlackGhost ? ArtCache.GhostBlackBorder : ArtCache.GhostWhiteBorder;
+
+            if (Plugin.animated_ghost_cache.TryGetAnimation(
+                monsterType: data.MonsterType,
+                borderType: borderType,
+                expansionType: ECardExpansionType.Ghost,
+                isFoil: __instance.GetCardData().isFoil,
+                out var frames))
             {
                 if (ghostCard == null)
                 {
-                    //Plugin.Logger.LogWarning("Ghost card is null, cannot add animator");
                     return;
                 }
 
@@ -46,15 +46,8 @@ namespace ArtExpander.Patches
                 
                 if (mainImage == null || maskImage == null)
                 {
-                    //Plugin.Logger.LogWarning("Required images are null, cannot add animator");
                     return;
                 }
-
-                // Plugin.Logger.LogWarning($"Setting up ghost card animation:\n" +
-                //     $"Monster Type: {data.MonsterType}\n" +
-                //     $"Ghost Card null?: {ghostCard == null}\n" +
-                //     $"Animation Frames Found: {frames != null}\n" +
-                //     $"Frame Count: {(frames != null ? frames.Length : 0)}");
                 
                 var animator = ghostCard.gameObject.AddComponent<GhostCardAnimatedRenderer>();
                 animator.Initialize(mainImage, maskImage, glowImage, frames);

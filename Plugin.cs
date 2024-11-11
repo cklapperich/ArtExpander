@@ -13,7 +13,7 @@ namespace ArtExpander
     [BepInDependency("shaklin.TextureReplacer", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
-        internal static AnimatedGhostCache animated_ghost_cache = new AnimatedGhostCache();
+        internal static AnimationCache animated_ghost_cache = new AnimationCache();
         internal static new ManualLogSource Logger;
         private readonly Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         internal static string PluginPath;

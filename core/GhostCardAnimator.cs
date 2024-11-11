@@ -1,8 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
-using HarmonyLib;
-using ArtExpander.Patches;
 namespace ArtExpander.Core
 {
     public class GhostCardAnimatedRenderer : MonoBehaviour
