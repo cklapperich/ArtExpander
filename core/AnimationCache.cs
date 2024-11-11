@@ -11,13 +11,11 @@ namespace ArtExpander.Core
     public class AnimationCache 
     {
         // Cache for animation frame paths, keyed by card properties
-        private readonly Dictionary<(EMonsterType monsterType, ECardBorderType BorderType, ECardExpansionType ExpansionType, bool IsFoil), List<string>> _animationFilePaths 
-            = new Dictionary<(EMonsterType monsterType, ECardBorderType BorderType, ECardExpansionType ExpansionType, bool IsFoil), List<string>>();
-
+    private readonly Dictionary<(EMonsterType monsterType, ECardBorderType BorderType, ECardExpansionType ExpansionType, bool IsFoil), List<string>> _animationFilePaths 
+        = new Dictionary<(EMonsterType monsterType, ECardBorderType BorderType, ECardExpansionType ExpansionType, bool IsFoil), List<string>>();
         // Cache for loaded sprite arrays, keyed by the folder path containing the animation frames
-        private readonly Dictionary<string, Sprite[]> _loadedAnimations = new Dictionary<string, Sprite[]>();
-        
-            private AssetBundle _animationsBundle;
+    private readonly Dictionary<string, Sprite[]> _loadedAnimations = new Dictionary<string, Sprite[]>();
+    private AssetBundle _animationsBundle;
     public void Initialize(string rootPath)
     {
         // Validate input parameter
@@ -95,7 +93,7 @@ namespace ArtExpander.Core
 
                 // Use the first file to determine the card properties
                 var firstFile = directory.First();
-                var cardResolution = ArtCache.ResolveCardFromPath(firstFile);
+                var cardResolution = CardAssetResolver.CardInfoFromPath(firstFile);
                 
                 var cacheKey = (monsterType, cardResolution.BorderType, cardResolution.ExpansionType, cardResolution.IsFoil);
 
@@ -114,72 +112,13 @@ namespace ArtExpander.Core
             Plugin.Logger.LogInfo($"Scanning complete. Found {_animationFilePaths.Count} animation sets");
         }
 
-    public List<string> ResolveArtPathToList(EMonsterType monsterType, ECardBorderType borderType, 
-        ECardExpansionType expansionType, bool isFoil = false)
-    {
-        // Local function to try lookup with foil fallback
-        List<string> TryLookup(EMonsterType mt, ECardBorderType bt, ECardExpansionType et, bool tryFoilFallback = true)
-        {   
-            // Create lookup key with the specified foil status
-            var key = (mt, bt, et, isFoil);
-            if (_animationFilePaths.TryGetValue(key, out var path))
-            {
-                return path;
-            }
-                    
-            // Try non-foil fallback if requested
-            if (tryFoilFallback && isFoil)
-            {
-                key = (mt, bt, et, false);
-                if (_animationFilePaths.TryGetValue(key, out path))
-                {
-                    return path;
-                }
-            }
-                    
-            return null;
-        }
-
-        // Try lookups from most specific to least specific
-        
-        // 1. Try with all specified parameters
-        List<string> result = TryLookup(monsterType, borderType, expansionType);
-        if (result != null)
-        {
-            return result;
-        }
-
-        // 2. Try with no border but specified expansion (Tetramon vs Destiny split)
-        result = TryLookup(monsterType, ArtCache.NoneBorder, expansionType);
-        if (result != null)
-        {
-            return result;
-        }
-
-        // 3. Try with specified border but no expansion
-        result = TryLookup(monsterType, borderType, ECardExpansionType.None);
-        if (result != null)
-        {
-            return result;
-        }
-
-        // 4. Try with no border and no expansion (most generic case)
-        result = TryLookup(monsterType, ArtCache.NoneBorder, ECardExpansionType.None);
-        if (result != null)
-        {
-            return result;
-        }
-                
-        return null;
-    }
-
     public bool TryGetAnimation(EMonsterType monsterType, ECardBorderType borderType, 
-    ECardExpansionType expansionType, bool isFoil, out Sprite[] frames)
+    ECardExpansionType expansionType, bool isBlackGhost, bool isFoil, out Sprite[] frames)
     {
         frames = null;
         
         // Get the list of frame paths for this card variant
-        List<string> framePaths = ResolveArtPathToList(monsterType, borderType, expansionType, isFoil);
+        List<string> framePaths = CardAssetResolver.ResolvePathFromCardInfo(_animationFilePaths, monsterType, borderType, expansionType, isBlackGhost, isFoil);
 
         if (framePaths == null || !framePaths.Any())
         {

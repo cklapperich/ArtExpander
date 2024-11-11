@@ -13,47 +13,23 @@ public class ArtCache {
     private string _baseArtPath;
     // special border type constants, internally the game treats GhostWhite/GhostBLack as a EElementIndex
     // Using -1 to match ECardExpansionType.None pattern
-    public const ECardBorderType NoneBorder = (ECardBorderType)(-1);
-    public const ECardBorderType GhostWhiteBorder = (ECardBorderType)(-2);
-    public const ECardBorderType GhostBlackBorder = (ECardBorderType)(-3);
 
-    public class CardFolderResolutionResult {
-        public ECardExpansionType ExpansionType = ECardExpansionType.None;
-        public ECardBorderType BorderType = (ECardBorderType)(-1); // NoneBorder
-        public bool IsFoil = false;
+    public string ResolveArtPath(
+        EMonsterType monsterType, 
+        ECardBorderType borderType, 
+        ECardExpansionType expansionType, 
+        bool isBlackGhost,
+        bool isFoil = false)
+        {
+            return CardAssetResolver.ResolvePathFromCardInfo(
+                _resolvedPathCache, 
+                monsterType, 
+                borderType,
+                expansionType, 
+                isBlackGhost,
+                isFoil);
     }
 
-    public static CardFolderResolutionResult ResolveCardFromPath(string filepath) {
-        var result = new CardFolderResolutionResult();
-        // Split path into components and examine each folder
-        string[] folders = filepath.Split(Path.DirectorySeparatorChar);
-        //Plugin.Logger.LogWarning($"ResolveCardFromPath is checking {filepath}");
-        foreach(string folder in folders) {
-            if(string.IsNullOrEmpty(folder)){
-                continue;
-            } 
-
-            // Check for foil
-            //Plugin.Logger.LogWarning($"{folder}");
-            if(folder.Contains("foil", StringComparison.OrdinalIgnoreCase)) { 
-                result.IsFoil = true;
-                continue;
-            }
-
-            // Try expansion type
-            if(Enum.TryParse<ECardExpansionType>(folder, true, out var expansionType)) {
-                result.ExpansionType = expansionType;
-                continue;  
-            }
-
-            // Try border type using existing method
-            if(TryParseBorderFolder(folder, out var borderType)) {
-                result.BorderType = borderType;
-                continue;
-            }
-        }
-        return result;
-    }
     public void LogCacheContents()
     {
         Plugin.Logger.LogInfo("=== Art Cache Contents ===");
@@ -95,34 +71,7 @@ public class ArtCache {
 
         Plugin.Logger.LogInfo("\n=== End Art Cache Contents ===");
     }
-    private static bool TryParseBorderFolder(string borderName, out ECardBorderType borderType) 
-    {
-        // Handle ghost variants first
-        if (borderName.Equals("GhostWhite", StringComparison.OrdinalIgnoreCase)) {
-            borderType = GhostWhiteBorder;
-            return true;
-        }
-        if (borderName.Equals("GhostBlack", StringComparison.OrdinalIgnoreCase)) {
-            borderType = GhostBlackBorder;
-            return true;
-        }
 
-        // we have to handle these for backwards compatibility with V3.2 of my mod :)
-        // Handle _black suffix
-        if (borderName.EndsWith("_black", StringComparison.OrdinalIgnoreCase)) {
-            borderType = GhostWhiteBorder;
-            return true;
-        }
-        
-        // Handle _white suffix
-        if (borderName.EndsWith("_white", StringComparison.OrdinalIgnoreCase)) {
-            borderType = GhostWhiteBorder;
-            return true;
-        }
-        
-        // Try normal border type parse if no special cases match
-        return Enum.TryParse<ECardBorderType>(borderName, true, out borderType);
-    }
     public void Initialize(string basePath)
     {
         _baseArtPath = basePath;
@@ -148,7 +97,7 @@ public class ArtCache {
                     var relativeFolderPath = Path.GetRelativePath(_baseArtPath, currentFolder);
                     
                     // Get folder resolution result using relative path
-                    var resolutionResult = ResolveCardFromPath(relativeFolderPath);
+                    var resolutionResult = CardAssetResolver.CardInfoFromPath(relativeFolderPath);
 
                     foreach (var pngFile in pngFiles)
                     {
@@ -177,55 +126,6 @@ public class ArtCache {
                 }
             }
         }
-    }
-    public string ResolveArtPath(EMonsterType monsterType, ECardBorderType borderType, ECardExpansionType expansionType, bool isDestiny, bool isFoil = false)
-    {
-        ECardBorderType modifiedBorderType = borderType;
-        // For Ghost expansion, use isDestiny to determine which ghost variant to use
-        if (expansionType == ECardExpansionType.Ghost)
-        {
-            modifiedBorderType = isDestiny 
-                ? GhostBlackBorder 
-                : GhostWhiteBorder;
-        }
-
-        // special method to try specified foil type first then non-foil
-        string TryLookup(EMonsterType mt, ECardBorderType bt, ECardExpansionType et, bool tryFoilFallback = true)
-        {
-            // Try with specified foil status
-            if (_resolvedPathCache.TryGetValue((mt, bt, et, isFoil), out string path))
-                return path;
-                
-            // Optionally try non-foil fallback
-            if (tryFoilFallback && isFoil && _resolvedPathCache.TryGetValue((mt, bt, et, false), out path))
-                return path;
-                
-            return null;
-        }
-
-        // Try most specific combination first, then least specific last
-        string result = TryLookup(monsterType, modifiedBorderType, expansionType);
-        if (result != null)
-            return result;
-
-        //no border specified, expansion specified. This is the Tetramon vs Destiny 'split'
-        // use case, to merely double the # of cards in the game by splitting Tetramon?Destiny
-        result = TryLookup(monsterType, NoneBorder, expansionType);
-        if (result != null)
-            return result;
-
-        // no expansion specified, border specified
-        result = TryLookup(monsterType, modifiedBorderType, ECardExpansionType.None);
-        if (result != null)
-            return result;
-
-        // no border specified, no expansion specified
-        result = TryLookup(monsterType, NoneBorder, ECardExpansionType.None);
-        if (result != null)
-            return result;
-            
-        return null;
-
     }
     public Sprite LoadSprite(string path) {
         if (string.IsNullOrEmpty(path))

@@ -24,15 +24,13 @@ namespace ArtExpander.Patches
                     Object.Destroy(animator);
                 }
             }
-
-            // Use the appropriate ghost border type based on isBlackGhost
-            var borderType = isBlackGhost ? ArtCache.GhostBlackBorder : ArtCache.GhostWhiteBorder;
-
+            CardData card_data = __instance.GetCardData();
             if (Plugin.animated_ghost_cache.TryGetAnimation(
                 monsterType: data.MonsterType,
-                borderType: borderType,
+                borderType: card_data.borderType,
                 expansionType: ECardExpansionType.Ghost,
-                isFoil: __instance.GetCardData().isFoil,
+                isBlackGhost:isBlackGhost,
+                isFoil: card_data.isFoil,
                 out var frames))
             {
                 if (ghostCard == null)
