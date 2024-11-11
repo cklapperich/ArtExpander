@@ -123,7 +123,9 @@ public void LogCacheContents()
                     }
                 }
             } else {
-                Plugin.Logger.LogWarning($"Skipping unrecognized border folder: {borderName}");
+                if (borderName!="animated"){
+                    Plugin.Logger.LogWarning($"Skipping unrecognized border folder: {borderName}");
+                }
             }
         }
     }

@@ -1,6 +1,5 @@
-
-// File: Utils/FileNameResolver.cs
 using System;
+using System.IO;
 
 namespace ArtExpander.Core
 {
@@ -10,10 +9,8 @@ namespace ArtExpander.Core
         {
             monsterType = EMonsterType.None;
             
-            if (filename.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-            {
-                filename = filename.Substring(0, filename.Length - 4);
-            }
+            // Strip any file extension using Path.GetFileNameWithoutExtension
+            filename = Path.GetFileNameWithoutExtension(filename);
 
             string[] expansionPrefixes = {
                 "Tetramon_", "Destiny_", "Ghost_", "Megabot_", 
@@ -22,26 +19,29 @@ namespace ArtExpander.Core
             
             foreach (var prefix in expansionPrefixes)
             {
-                filename = filename.Replace(prefix, "");
+                filename = filename.Replace(prefix, "", StringComparison.OrdinalIgnoreCase);
             }
 
-            switch (filename)
+            // Convert to lowercase before the switch comparison
+            string lowercaseFilename = filename.ToLowerInvariant();
+            
+            switch (lowercaseFilename)
             {
-                case "Mummy":
+                case "mummy":
                     monsterType = EMonsterType.MummyMan;
                     return true;
-                case "CrystalA":
+                case "crystala":
                     monsterType = EMonsterType.EmeraldA;
                     return true;
-                case "CrystalB":
+                case "crystalb":
                     monsterType = EMonsterType.EmeraldB;
                     return true;
-                case "CrystalC":
+                case "crystalc":
                     monsterType = EMonsterType.EmeraldC;
                     return true;
             }
-
-            return Enum.TryParse<EMonsterType>(filename, out monsterType);
+            
+            return Enum.TryParse<EMonsterType>(filename, true, out monsterType);
         }
     }
 }

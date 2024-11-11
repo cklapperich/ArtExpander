@@ -13,15 +13,17 @@ public class GetIconPatch
 {
     public static bool Prefix(MonsterData __instance, ECardExpansionType cardExpansionType, ref Sprite __result)
     {
+    // Plugin.Logger.LogInfo($"=== GetIcon Called ===\n" +
+    // $"Monster: {__instance.MonsterType}\n" +
+    // $"Expansion: {cardExpansionType}");
+        
         var (borderType, isDestiny) = CardUISetCardPatch.CardDataTracker.GetCurrentCardInfo();
-
         string artPath = Plugin.art_cache.ResolveArtPath(
             __instance.MonsterType,
             borderType,
             cardExpansionType,
             isDestiny
         );
-
         if (!string.IsNullOrEmpty(artPath))
         {
             var customSprite = Plugin.art_cache.LoadSprite(artPath);
@@ -30,6 +32,7 @@ public class GetIconPatch
                 __result = customSprite;
                 return false;
             }
+            Plugin.Logger.LogWarning("Failed to load correct filepath from art cache!");
         }
 
         return true;
