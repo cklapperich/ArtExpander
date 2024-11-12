@@ -25,6 +25,7 @@ namespace ArtExpander.Patches
                 }
             }
             CardData card_data = __instance.GetCardData();
+
             if (Plugin.animated_ghost_cache.TryGetAnimation(
                 monsterType: data.MonsterType,
                 borderType: card_data.borderType,
@@ -37,7 +38,6 @@ namespace ArtExpander.Patches
                 {
                     return;
                 }
-
                 var mainImage = AccessTools.Field(typeof(CardUI), "m_MonsterImage").GetValue(ghostCard) as Image;
                 var maskImage = AccessTools.Field(typeof(CardUI), "m_MonsterMaskImage").GetValue(ghostCard) as Image;
                 var glowImage = AccessTools.Field(typeof(CardUI), "m_MonsterGlowMask").GetValue(ghostCard) as Image;

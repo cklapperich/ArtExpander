@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using ArtExpander.Core;
 //TODO: ADD CODE FOR UNITY ASYNC ASSET LOADING
 //TODO: TEXTURE COMPRESSION? IF TEXTURES ARE MULTIPLES OF 4 ON THE DIMENSION BUT
 // COULD INCREASE CPU USAGE!!
@@ -16,80 +17,102 @@ namespace ArtExpander.Core
         // Cache for loaded sprite arrays, keyed by the folder path containing the animation frames
     private readonly Dictionary<string, Sprite[]> _loadedAnimations = new Dictionary<string, Sprite[]>();
     private AssetBundle _animationsBundle;
-    public void Initialize(string rootPath)
+    private AssetBundleLoader _bundleLoader;
+
+public void LogCacheContents()
+{
+    if (_animationFilePaths == null || _animationFilePaths.Count == 0)
     {
-        // Validate input parameter
-        if (string.IsNullOrWhiteSpace(rootPath))
-        {
-            throw new ArgumentNullException(nameof(rootPath), "Root path cannot be null or empty.");
-        }
-
-        // Verify root path exists
-        if (!Directory.Exists(rootPath))
-        {
-            Plugin.Logger.LogError($"Root directory does not exist at {rootPath}");
-            throw new DirectoryNotFoundException($"The specified root path does not exist: {rootPath}");
-        }
-
-        bool loadFromBundle = false;
-        string bundlePath = rootPath + ".assets";
-        
-        try
-        {
-            if (File.Exists(bundlePath))
-            {
-                loadFromBundle = true;
-                _animationsBundle = AssetBundle.LoadFromFile(bundlePath);
-                
-                if (_animationsBundle == null)
-                {
-                    Plugin.Logger.LogError($"Failed to load asset bundle at {bundlePath}");
-                    throw new InvalidOperationException($"Asset bundle could not be loaded from {bundlePath}");
-                }
-            }
-            else
-            {
-                Plugin.Logger.LogWarning($"Could not find asset bundle at {bundlePath}");
-            }
-
-            ScanAnimationFolder(rootPath, loadFromBundle);
-        }
-        catch (Exception ex) when (ex is not ArgumentNullException && ex is not DirectoryNotFoundException)
-        {
-            Plugin.Logger.LogError($"Error during initialization: {ex.Message}");
-            _animationsBundle?.Unload(true);
-            throw;
-        }
+        Plugin.Logger.LogInfo("Animation cache is empty.");
+        return;
     }
 
-        private void ScanAnimationFolder(string targetFolder, bool isAssetBundle = true)
-        {
-            IEnumerable<string> allPngPaths;
-            
-            if (isAssetBundle)
-            {
-                allPngPaths = _animationsBundle.GetAllAssetNames()
-                    .Where(name => name.EndsWith(".png", StringComparison.OrdinalIgnoreCase));
-            }
-            else 
-            {
-                allPngPaths = Directory.GetFiles(targetFolder, "*.png", SearchOption.AllDirectories);
-            }
+    Plugin.Logger.LogInfo($"Animation Cache Contents ({_animationFilePaths.Count} total animations):");
+    Plugin.Logger.LogInfo("----------------------------------------");
 
+    foreach (var cacheEntry in _animationFilePaths)
+    {
+        var (monsterType, borderType, expansionType, isFoil) = cacheEntry.Key;
+        var frames = cacheEntry.Value;
+
+        Plugin.Logger.LogInfo($"Monster Type: {monsterType}");
+        Plugin.Logger.LogInfo($"Border Type: {borderType}");
+        Plugin.Logger.LogInfo($"Expansion Type: {expansionType}");
+        Plugin.Logger.LogInfo($"Is Foil: {isFoil}");
+        Plugin.Logger.LogInfo($"Frame Count: {frames.Count}");
+        
+        // Log the first and last frame paths as examples
+        if (frames.Any())
+        {
+            Plugin.Logger.LogInfo($"First Frame: {frames.First()}");
+            Plugin.Logger.LogInfo($"Last Frame: {frames.Last()}");
+        }
+        
+        Plugin.Logger.LogInfo("----------------------------------------");
+    }
+
+    // Log loaded animations state
+    Plugin.Logger.LogInfo($"Currently loaded animations in memory: {_loadedAnimations.Count}");
+    foreach (var loadedPath in _loadedAnimations.Keys)
+    {
+        Plugin.Logger.LogInfo($"Loaded animation directory: {loadedPath} ({_loadedAnimations[loadedPath].Length} frames)");
+    }
+}
+
+        public void Initialize(string rootPath)
+        {
+            try
+            {
+                // Initialize the bundle loader with the .assets suffix
+                _bundleLoader = new AssetBundleLoader(rootPath, ".assets");
+                
+                if (_bundleLoader.IsUsingBundle)
+                {
+                    ScanAnimationPaths(_bundleLoader.GetAllAssetNames());
+                }
+                else
+                {
+                    // Verify root path exists
+                    if (!Directory.Exists(rootPath))
+                    {
+                        Plugin.Logger.LogError($"Root directory does not exist at {rootPath}");
+                        throw new DirectoryNotFoundException($"The specified root path does not exist: {rootPath}");
+                    }
+                    ScanAnimationPaths(Directory.GetFiles(rootPath, "*.png", SearchOption.AllDirectories));
+                }
+            }
+            catch (Exception ex) when (ex is not ArgumentNullException && ex is not DirectoryNotFoundException)
+            {
+                Plugin.Logger.LogError($"Error during initialization: {ex.Message}");
+                _bundleLoader?.Dispose();
+                throw;
+            }
+            //LogCacheContents();
+        }
+
+        private void ScanAnimationPaths(IEnumerable<string> paths)
+        {
             _animationFilePaths.Clear();
 
+            // Filter for PNG files if not already filtered
+            var pngPaths = paths.Where(path => path.EndsWith(".png", StringComparison.OrdinalIgnoreCase));
+            
             // Group files by their directory to handle multiple animations
-            var framesByDirectory = allPngPaths.GroupBy(Path.GetDirectoryName);
-
+            var framesByDirectory = pngPaths.GroupBy(Path.GetDirectoryName);
+            //Plugin.Logger.LogWarning(framesByDirectory);
             foreach (var directory in framesByDirectory)
             {
-                //needed for version 3.2 compatibilty where people can name things _black or _white
+                //Plugin.Logger.LogWarning("================================");
+                // Needed for version 3.2 compatibility where people can name things _black or _white
                 string monstertype_string = directory.Key.Replace("_white","").Replace("_black","");
+                //Plugin.Logger.LogWarning(directory);
+                //Plugin.Logger.LogWarning(monstertype_string);
                 if (!FileNameToMonsterTypeResolver.TryResolveMonsterType(monstertype_string, out EMonsterType monsterType))
                 {
                     Plugin.Logger.LogWarning($"Could not resolve monster type for directory: {directory.Key}");
                     continue;
                 }
+                //Plugin.Logger.LogWarning(monsterType);
 
                 // Use the first file to determine the card properties
                 var firstFile = directory.First();
@@ -106,75 +129,67 @@ namespace ArtExpander.Core
 
                 _animationFilePaths[cacheKey] = sortedFrames;
 
-                Plugin.Logger.LogInfo($"Cached {sortedFrames.Count} frame paths for {directory.Key}");
+                //Plugin.Logger.LogInfo($"Cached {sortedFrames.Count} frame paths for {directory.Key}");
             }
 
             Plugin.Logger.LogInfo($"Scanning complete. Found {_animationFilePaths.Count} animation sets");
         }
 
-    public bool TryGetAnimation(EMonsterType monsterType, ECardBorderType borderType, 
-    ECardExpansionType expansionType, bool isBlackGhost, bool isFoil, out Sprite[] frames)
-    {
-        frames = null;
-        
-        // Get the list of frame paths for this card variant
-        List<string> framePaths = CardAssetResolver.ResolvePathFromCardInfo(_animationFilePaths, monsterType, borderType, expansionType, isBlackGhost, isFoil);
-
-        if (framePaths == null || !framePaths.Any())
+        public bool TryGetAnimation(EMonsterType monsterType, ECardBorderType borderType, 
+            ECardExpansionType expansionType, bool isBlackGhost, bool isFoil, out Sprite[] frames)
         {
+            frames = null;
+            
+            // Get the list of frame paths for this card variant
+            List<string> framePaths = CardAssetResolver.ResolvePathFromCardInfo(
+                _animationFilePaths, 
+                monsterType, 
+                borderType, 
+                expansionType, 
+                isBlackGhost, 
+                isFoil);
+
+            if (framePaths == null || !framePaths.Any())
+            {
+                return false;
+            }
+
+            // Use the directory path as the cache key for loaded sprites
+            string directoryPath = Path.GetDirectoryName(framePaths[0]);
+            
+            // Check if we already have these sprites loaded
+            if (_loadedAnimations.TryGetValue(directoryPath, out frames))
+            {
+                return true;
+            }
+
+            // Load all sprites for this animation
+            var loadedFrames = new List<Sprite>();
+            foreach (var path in framePaths)
+            {
+                try
+                {
+                    Sprite sprite = _bundleLoader.LoadSprite(path);
+                    if (sprite != null)
+                    {
+                        loadedFrames.Add(sprite);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Logger.LogError($"Failed to load frame from {path}: {ex.Message}");
+                }
+            }
+
+            if (loadedFrames.Count > 0)
+            {
+                frames = loadedFrames.ToArray();
+                _loadedAnimations[directoryPath] = frames;
+                return true;
+            }
+
             return false;
         }
-
-        // Use the directory path as the cache key for loaded sprites
-        string directoryPath = Path.GetDirectoryName(framePaths[0]);
-        
-        // Check if we already have these sprites loaded
-        if (_loadedAnimations.TryGetValue(directoryPath, out frames))
-        {
-            return true;
-        }
-
-        // Load all sprites for this animation
-        var loadedFrames = new List<Sprite>();
-        foreach (var path in framePaths)
-        {
-            try
-            {
-                Sprite sprite;
-                if (_animationsBundle != null)
-                {
-                    sprite = _animationsBundle.LoadAsset<Sprite>(path);
-                }
-                else
-                {
-                    byte[] fileData = File.ReadAllBytes(path);
-                    var texture = new Texture2D(2, 2, TextureFormat.RGBA32, mipChain: true);
-                    texture.LoadImage(fileData);
-                    sprite = Sprite.Create(texture, 
-                        new Rect(0, 0, texture.width, texture.height),
-                        new Vector2(0.5f, 0.5f));
-                }
-
-                if (sprite != null)
-                {
-                    loadedFrames.Add(sprite);
-                }
-            }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogError($"Failed to load frame from {path}: {ex.Message}");
-            }
-        }
-
-        if (loadedFrames.Count > 0)
-        {
-            frames = loadedFrames.ToArray();
-            _loadedAnimations[directoryPath] = frames;
-            return true;
-        }
-
-        return false;
-    }
 
     public void Dispose()
     {
@@ -193,7 +208,7 @@ namespace ArtExpander.Core
         {
             foreach (var sprite in frames)
             {
-                if (sprite != null)
+                if ( sprite != null)
                 {
                     UnityEngine.Object.Destroy(sprite);
                 }

@@ -18,15 +18,15 @@ namespace ArtExpander.Core {
     public static CardFolderResolutionResult CardInfoFromPath(string filepath) {
         var result = new CardFolderResolutionResult();
         // Split path into components and examine each folder
-        string[] folders = filepath.Split(Path.DirectorySeparatorChar);
-        //Plugin.Logger.LogWarning($"ResolveCardFromPath is checking {filepath}");
+        string[] folders = filepath.Split(new[] { '/', '\\' }, 
+                                        StringSplitOptions.RemoveEmptyEntries);
+
         foreach(string folder in folders) {
             if(string.IsNullOrEmpty(folder)){
                 continue;
             }
 
             // Check for foil
-            //Plugin.Logger.LogWarning($"{folder}");
             if(folder.Contains("foil", StringComparison.OrdinalIgnoreCase)) { 
                 result.IsFoil = true;
                 continue;
@@ -47,7 +47,7 @@ namespace ArtExpander.Core {
         return result;
     }
     private static bool TryParseBorderFolder(string borderName, out ECardBorderType borderType) 
-    {
+    {   
         // Handle ghost variants first
         if (borderName.Equals("GhostWhite", StringComparison.OrdinalIgnoreCase)) {
             borderType = GhostWhiteBorder;
@@ -61,7 +61,7 @@ namespace ArtExpander.Core {
         // we have to handle these for backwards compatibility with V3.2 of my mod :)
         // Handle _black suffix
         if (borderName.EndsWith("_black", StringComparison.OrdinalIgnoreCase)) {
-            borderType = GhostWhiteBorder;
+            borderType = GhostBlackBorder;
             return true;
         }
         
@@ -72,8 +72,10 @@ namespace ArtExpander.Core {
         }
         
         // Try normal border type parse if no special cases match
-        return Enum.TryParse<ECardBorderType>(borderName, true, out borderType);
+        bool result=Enum.TryParse<ECardBorderType>(borderName, true, out borderType);
+        return result;
     }
+
 
     // Common resolution method that works with either single paths or lists
     public static T ResolvePathFromCardInfo<T>(

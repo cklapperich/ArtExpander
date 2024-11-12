@@ -25,13 +25,14 @@ public class GetIconPatch
         );
         if (!string.IsNullOrEmpty(artPath))
         {
+
             var customSprite = Plugin.art_cache.LoadSprite(artPath);
             if (customSprite != null)
             {
                 __result = customSprite;
                 return false;
             }
-            Plugin.Logger.LogWarning("Failed to load correct filepath from art cache!");
+            //Plugin.Logger.LogWarning("Failed to load correct filepath from art cache!");
         }
 
         return true;

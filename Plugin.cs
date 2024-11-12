@@ -38,15 +38,10 @@ namespace ArtExpander
             Logger.LogDebug($"Art Expander starting! Plugin path: {PluginPath}");
             
             string cardArtPath = Path.Combine(PluginPath, "cardart");
-            string baseArtPath = PluginPath;
-            
-            bool useCardArtPath = Directory.Exists(cardArtPath);
-            string finalArtPath = useCardArtPath ? cardArtPath : baseArtPath;
-            Logger.LogDebug($"Using art path: {finalArtPath}");
 
             if (EnableAnimations.Value)
             {
-                string animatedGhostPath = Path.Combine(finalArtPath, "Ghost", "animated");
+                string animatedGhostPath = Path.Combine(PluginPath, "animated");
                 animated_ghost_cache.Initialize(animatedGhostPath);
             }
             else
@@ -54,7 +49,7 @@ namespace ArtExpander
                 Logger.LogInfo("Animations disabled in config - skipping animation loading");
             }
 
-            art_cache.Initialize(finalArtPath);
+            art_cache.Initialize(cardArtPath);
             
             harmony.PatchAll();
             Logger.LogInfo("Patches applied!");
