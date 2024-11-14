@@ -89,8 +89,8 @@ namespace ArtExpander.Core {
                     // Verify base path exists
                     if (!Directory.Exists(basePath))
                     {
-                        Plugin.Logger.LogError($"cardart directory does not exist at {basePath}");
-                        throw new DirectoryNotFoundException($"The specified cardart path does not exist: {basePath}");
+                        Plugin.Logger.LogError($"cardart directory does not exist at {basePath}. failed to initialize ArtCache.");
+                        return;
                     }
 
                     var allFiles = new List<string>();
@@ -123,9 +123,8 @@ namespace ArtExpander.Core {
             }
             catch (Exception ex) when (ex is not ArgumentNullException && ex is not DirectoryNotFoundException)
             {
-                Plugin.Logger.LogError($"Error during initialization: {ex.Message}");
+                Plugin.Logger.LogError($"Error during ArtCache initialization: {ex.Message}");
                 _bundleLoader?.Dispose();
-                throw;
             }
             //LogCacheContents();
         }

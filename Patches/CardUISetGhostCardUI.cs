@@ -30,6 +30,9 @@ namespace ArtExpander.Patches
         [HarmonyPostfix]
         static void Postfix(CardUI __instance, MonsterData data, bool isBlackGhost)
         {
+            if (!Plugin.EnableAnimations.Value){
+                return;
+            }
             try
             {
                 // Clean up existing animators first

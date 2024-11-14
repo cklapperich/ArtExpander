@@ -33,7 +33,6 @@ namespace ArtExpander.Core
             using (BinaryReader reader = new BinaryReader(fs, Encoding.UTF8))
             {
                 var actualFileSize = new FileInfo(filePath).Length;
-                Console.WriteLine($"Actual file size: {actualFileSize:N0} bytes\n");
 
                 // Read signature (8 bytes)
                 byte[] signatureBytes = reader.ReadBytes(8);
@@ -103,6 +102,10 @@ namespace ArtExpander.Core
                         Plugin.Logger.LogError($"!!! ASSETBUNDLE NOT IN LZ4 format. compression_type is {compression_type} Please package in LZ4 or UNCOMPRESSED for better performance.");
                     }
 
+
+                    _bundle = AssetBundle.LoadFromFile(_bundlePath);
+                    _allAssetNames = _bundle.GetAllAssetNames();
+
                 }
                 catch (Exception ex)
                 {
@@ -115,11 +118,6 @@ namespace ArtExpander.Core
                 Plugin.Logger.LogWarning($"Failed to load from bundle. File {_bundlePath} not found.");
                 _loadFromBundle = false;
             }
-
-            _bundle = AssetBundle.LoadFromFile(_bundlePath);
-            // For asset bundles, get all asset names and find first PNG
-            _allAssetNames = _bundle.GetAllAssetNames();
-
         }
 
         public string[] GetAllAssetNames()

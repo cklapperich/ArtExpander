@@ -12,59 +12,59 @@ namespace ArtExpander.Core
     public class AnimationCache 
     {
         // Cache for animation frame paths, keyed by card properties
-    private readonly Dictionary<(EMonsterType monsterType, ECardBorderType BorderType, ECardExpansionType ExpansionType, bool IsFoil), List<string>> _animationFilePaths 
-        = new Dictionary<(EMonsterType monsterType, ECardBorderType BorderType, ECardExpansionType ExpansionType, bool IsFoil), List<string>>();
-        // Cache for loaded sprite arrays, keyed by the folder path containing the animation frames
-    private readonly Dictionary<string, Sprite[]> _loadedAnimations = new Dictionary<string, Sprite[]>();
-    private AssetBundle _animationsBundle;
-    private AssetBundleLoader _bundleLoader;
-    private readonly MonoBehaviour _coroutineRunner;
+        private readonly Dictionary<(EMonsterType monsterType, ECardBorderType BorderType, ECardExpansionType ExpansionType, bool IsFoil), List<string>> _animationFilePaths 
+            = new Dictionary<(EMonsterType monsterType, ECardBorderType BorderType, ECardExpansionType ExpansionType, bool IsFoil), List<string>>();
+            // Cache for loaded sprite arrays, keyed by the folder path containing the animation frames
+        private readonly Dictionary<string, Sprite[]> _loadedAnimations = new Dictionary<string, Sprite[]>();
+        private AssetBundle _animationsBundle;
+        private AssetBundleLoader _bundleLoader;
+        private readonly MonoBehaviour _coroutineRunner;
 
-    public void LogCacheContents()
-    {
-        if (_animationFilePaths == null || _animationFilePaths.Count == 0)
+        public void LogCacheContents()
         {
-            Plugin.Logger.LogInfo("Animation cache is empty.");
-            return;
+            if (_animationFilePaths == null || _animationFilePaths.Count == 0)
+            {
+                Plugin.Logger.LogInfo("Animation cache is empty.");
+                return;
+            }
+
+            Plugin.Logger.LogInfo($"Animation Cache Contents ({_animationFilePaths.Count} total animations):");
+            Plugin.Logger.LogInfo("----------------------------------------");
+
+            // foreach (var cacheEntry in _animationFilePaths)
+            // {
+            //     var (monsterType, borderType, expansionType, isFoil) = cacheEntry.Key;
+            //     var frames = cacheEntry.Value;
+
+            //     Plugin.Logger.LogInfo($"Monster Type: {monsterType}");
+            //     Plugin.Logger.LogInfo($"Border Type: {borderType}");
+            //     Plugin.Logger.LogInfo($"Expansion Type: {expansionType}");
+            //     Plugin.Logger.LogInfo($"Is Foil: {isFoil}");
+            //     Plugin.Logger.LogInfo($"Frame Count: {frames.Count}");
+                
+            //     // Log the first and last frame paths as examples
+            //     if (frames.Any())
+            //     {
+            //         Plugin.Logger.LogInfo($"First Frame: {frames.First()}");
+            //         Plugin.Logger.LogInfo($"Last Frame: {frames.Last()}");
+            //     }
+                
+            //     Plugin.Logger.LogInfo("----------------------------------------");
+            // }
+
+            // Log loaded animations state
+            Plugin.Logger.LogInfo($"Currently loaded animations in memory: {_loadedAnimations.Count}");
+            foreach (var loadedPath in _loadedAnimations.Keys)
+            {
+                Plugin.Logger.LogInfo($"Loaded animation directory: {loadedPath} ({_loadedAnimations[loadedPath].Length} frames)");
+            }
         }
 
-        Plugin.Logger.LogInfo($"Animation Cache Contents ({_animationFilePaths.Count} total animations):");
-        Plugin.Logger.LogInfo("----------------------------------------");
-
-        // foreach (var cacheEntry in _animationFilePaths)
-        // {
-        //     var (monsterType, borderType, expansionType, isFoil) = cacheEntry.Key;
-        //     var frames = cacheEntry.Value;
-
-        //     Plugin.Logger.LogInfo($"Monster Type: {monsterType}");
-        //     Plugin.Logger.LogInfo($"Border Type: {borderType}");
-        //     Plugin.Logger.LogInfo($"Expansion Type: {expansionType}");
-        //     Plugin.Logger.LogInfo($"Is Foil: {isFoil}");
-        //     Plugin.Logger.LogInfo($"Frame Count: {frames.Count}");
-            
-        //     // Log the first and last frame paths as examples
-        //     if (frames.Any())
-        //     {
-        //         Plugin.Logger.LogInfo($"First Frame: {frames.First()}");
-        //         Plugin.Logger.LogInfo($"Last Frame: {frames.Last()}");
-        //     }
-            
-        //     Plugin.Logger.LogInfo("----------------------------------------");
-        // }
-
-        // Log loaded animations state
-        Plugin.Logger.LogInfo($"Currently loaded animations in memory: {_loadedAnimations.Count}");
-        foreach (var loadedPath in _loadedAnimations.Keys)
+        // Add to constructor
+        public AnimationCache(MonoBehaviour coroutineRunner)
         {
-            Plugin.Logger.LogInfo($"Loaded animation directory: {loadedPath} ({_loadedAnimations[loadedPath].Length} frames)");
+            _coroutineRunner = coroutineRunner;
         }
-    }
-
-    // Add to constructor
-    public AnimationCache(MonoBehaviour coroutineRunner)
-    {
-        _coroutineRunner = coroutineRunner;
-    }
 
         public void Initialize(string rootPath)
         {
@@ -72,7 +72,6 @@ namespace ArtExpander.Core
             {
                 // Initialize the bundle loader with the .assets suffix
                 _bundleLoader = new AssetBundleLoader(rootPath, ".assets");
-                
                 if (_bundleLoader.IsUsingBundle)
                 {
                     ScanAnimationPaths(_bundleLoader.GetAllAssetNames());
@@ -82,19 +81,19 @@ namespace ArtExpander.Core
                     // Verify root path exists
                     if (!Directory.Exists(rootPath))
                     {
-                        Plugin.Logger.LogError($"Root directory does not exist at {rootPath}");
-                        throw new DirectoryNotFoundException($"The specified root path does not exist: {rootPath}");
+                        Plugin.Logger.LogError($"Directory does not exist at {rootPath}. failed to initialize AnimationCache");
+                        return;
+
                     }
                     ScanAnimationPaths(Directory.GetFiles(rootPath, "*.png", SearchOption.AllDirectories));
                 }
             }
             catch (Exception ex) when (ex is not ArgumentNullException && ex is not DirectoryNotFoundException)
             {
-                Plugin.Logger.LogError($"Error during initialization: {ex.Message}");
+                Plugin.Logger.LogError($"Error during AnimationCache initialization: {ex.Message}");
                 _bundleLoader?.Dispose();
-                throw;
             }
-            LogCacheContents();
+            //LogCacheContents();
         }
 
         private void ScanAnimationPaths(IEnumerable<string> paths)
