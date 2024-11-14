@@ -18,46 +18,53 @@ namespace ArtExpander.Core
     private readonly Dictionary<string, Sprite[]> _loadedAnimations = new Dictionary<string, Sprite[]>();
     private AssetBundle _animationsBundle;
     private AssetBundleLoader _bundleLoader;
+    private readonly MonoBehaviour _coroutineRunner;
 
-public void LogCacheContents()
-{
-    if (_animationFilePaths == null || _animationFilePaths.Count == 0)
+    public void LogCacheContents()
     {
-        Plugin.Logger.LogInfo("Animation cache is empty.");
-        return;
-    }
-
-    Plugin.Logger.LogInfo($"Animation Cache Contents ({_animationFilePaths.Count} total animations):");
-    Plugin.Logger.LogInfo("----------------------------------------");
-
-    foreach (var cacheEntry in _animationFilePaths)
-    {
-        var (monsterType, borderType, expansionType, isFoil) = cacheEntry.Key;
-        var frames = cacheEntry.Value;
-
-        Plugin.Logger.LogInfo($"Monster Type: {monsterType}");
-        Plugin.Logger.LogInfo($"Border Type: {borderType}");
-        Plugin.Logger.LogInfo($"Expansion Type: {expansionType}");
-        Plugin.Logger.LogInfo($"Is Foil: {isFoil}");
-        Plugin.Logger.LogInfo($"Frame Count: {frames.Count}");
-        
-        // Log the first and last frame paths as examples
-        if (frames.Any())
+        if (_animationFilePaths == null || _animationFilePaths.Count == 0)
         {
-            Plugin.Logger.LogInfo($"First Frame: {frames.First()}");
-            Plugin.Logger.LogInfo($"Last Frame: {frames.Last()}");
+            Plugin.Logger.LogInfo("Animation cache is empty.");
+            return;
         }
-        
+
+        Plugin.Logger.LogInfo($"Animation Cache Contents ({_animationFilePaths.Count} total animations):");
         Plugin.Logger.LogInfo("----------------------------------------");
+
+        // foreach (var cacheEntry in _animationFilePaths)
+        // {
+        //     var (monsterType, borderType, expansionType, isFoil) = cacheEntry.Key;
+        //     var frames = cacheEntry.Value;
+
+        //     Plugin.Logger.LogInfo($"Monster Type: {monsterType}");
+        //     Plugin.Logger.LogInfo($"Border Type: {borderType}");
+        //     Plugin.Logger.LogInfo($"Expansion Type: {expansionType}");
+        //     Plugin.Logger.LogInfo($"Is Foil: {isFoil}");
+        //     Plugin.Logger.LogInfo($"Frame Count: {frames.Count}");
+            
+        //     // Log the first and last frame paths as examples
+        //     if (frames.Any())
+        //     {
+        //         Plugin.Logger.LogInfo($"First Frame: {frames.First()}");
+        //         Plugin.Logger.LogInfo($"Last Frame: {frames.Last()}");
+        //     }
+            
+        //     Plugin.Logger.LogInfo("----------------------------------------");
+        // }
+
+        // Log loaded animations state
+        Plugin.Logger.LogInfo($"Currently loaded animations in memory: {_loadedAnimations.Count}");
+        foreach (var loadedPath in _loadedAnimations.Keys)
+        {
+            Plugin.Logger.LogInfo($"Loaded animation directory: {loadedPath} ({_loadedAnimations[loadedPath].Length} frames)");
+        }
     }
 
-    // Log loaded animations state
-    Plugin.Logger.LogInfo($"Currently loaded animations in memory: {_loadedAnimations.Count}");
-    foreach (var loadedPath in _loadedAnimations.Keys)
+    // Add to constructor
+    public AnimationCache(MonoBehaviour coroutineRunner)
     {
-        Plugin.Logger.LogInfo($"Loaded animation directory: {loadedPath} ({_loadedAnimations[loadedPath].Length} frames)");
+        _coroutineRunner = coroutineRunner;
     }
-}
 
         public void Initialize(string rootPath)
         {
@@ -87,7 +94,7 @@ public void LogCacheContents()
                 _bundleLoader?.Dispose();
                 throw;
             }
-            //LogCacheContents();
+            LogCacheContents();
         }
 
         private void ScanAnimationPaths(IEnumerable<string> paths)
@@ -135,62 +142,69 @@ public void LogCacheContents()
             Plugin.Logger.LogInfo($"Scanning complete. Found {_animationFilePaths.Count} animation sets");
         }
 
-        public bool TryGetAnimation(EMonsterType monsterType, ECardBorderType borderType, 
-            ECardExpansionType expansionType, bool isBlackGhost, bool isFoil, out Sprite[] frames)
+     public bool RequestAnimationForCard(EMonsterType monsterType, ECardBorderType borderType, 
+        ECardExpansionType expansionType, bool isBlackGhost, bool isFoil, Action<Sprite[]> onFramesReady)
+    {
+        // Get the list of frame paths for this card variant
+        List<string> framePaths = CardAssetResolver.ResolvePathFromCardInfo(
+            _animationFilePaths, 
+            monsterType, 
+            borderType, 
+            expansionType, 
+            isBlackGhost, 
+            isFoil);
+
+        if (framePaths == null || !framePaths.Any())
         {
-            frames = null;
-            
-            // Get the list of frame paths for this card variant
-            List<string> framePaths = CardAssetResolver.ResolvePathFromCardInfo(
-                _animationFilePaths, 
-                monsterType, 
-                borderType, 
-                expansionType, 
-                isBlackGhost, 
-                isFoil);
-
-            if (framePaths == null || !framePaths.Any())
-            {
-                return false;
-            }
-
-            // Use the directory path as the cache key for loaded sprites
-            string directoryPath = Path.GetDirectoryName(framePaths[0]);
-            
-            // Check if we already have these sprites loaded
-            if (_loadedAnimations.TryGetValue(directoryPath, out frames))
-            {
-                return true;
-            }
-
-            // Load all sprites for this animation
-            var loadedFrames = new List<Sprite>();
-            foreach (var path in framePaths)
-            {
-                try
-                {
-                    Sprite sprite = _bundleLoader.LoadSprite(path);
-                    if (sprite != null)
-                    {
-                        loadedFrames.Add(sprite);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Plugin.Logger.LogError($"Failed to load frame from {path}: {ex.Message}");
-                }
-            }
-
-            if (loadedFrames.Count > 0)
-            {
-                frames = loadedFrames.ToArray();
-                _loadedAnimations[directoryPath] = frames;
-                return true;
-            }
-
             return false;
         }
 
+        string directoryPath = Path.GetDirectoryName(framePaths[0]);
+        
+        // Check if animation is already loaded
+        if (_loadedAnimations.TryGetValue(directoryPath, out var loadedFrames))
+        {
+            onFramesReady(loadedFrames);
+            return true;
+        }
+
+        // Start async loading if not cached
+        _coroutineRunner.StartCoroutine(LoadFramesCoroutine(framePaths, directoryPath, onFramesReady));
+        return true;
+    }
+
+    private System.Collections.IEnumerator LoadFramesCoroutine(List<string> framePaths, string directoryPath, Action<Sprite[]> onFramesReady)
+    {
+        if (!framePaths.Any()) yield break;
+        var loadedFrames = new List<Sprite>();
+        foreach (var path in framePaths)
+        {
+            Sprite sprite = null;
+            try 
+            {
+                sprite = _bundleLoader.LoadSprite(path);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"Failed to load frame from {path}: {ex.Message}");
+                continue;
+            }
+
+            if (sprite != null)
+            {
+                loadedFrames.Add(sprite);
+            }
+            yield return null;
+        }
+        
+        if (loadedFrames.Count > 0)
+        {
+            var frames = loadedFrames.ToArray();
+            _loadedAnimations[directoryPath] = frames;
+            onFramesReady(frames);
+        }
+    }
+    
     public void Dispose()
     {
         if (_animationsBundle != null)

@@ -189,15 +189,7 @@ namespace ArtExpander.Core {
             try
             {
                 Sprite sprite;
-                if (_bundleLoader.IsUsingBundle)
-                {
-                    sprite = _bundleLoader.LoadSprite(path);
-                }
-                else
-                {
-                    // Load the texture from file using the bundle loader
-                    sprite = _bundleLoader.LoadSprite(path);
-                }
+                sprite = _bundleLoader.LoadSprite(path);
 
                 if (sprite != null)
                 {

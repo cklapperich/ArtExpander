@@ -13,7 +13,7 @@ namespace ArtExpander
     [BepInDependency("shaklin.TextureReplacer", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
-        internal static AnimationCache animated_ghost_cache = new AnimationCache();
+        internal static AnimationCache animated_ghost_cache;
         internal static new ManualLogSource Logger;
         private readonly Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         internal static string PluginPath;
@@ -41,6 +41,8 @@ namespace ArtExpander
 
             if (EnableAnimations.Value)
             {
+                //needs a reference to a monobehavior so it can launch coroutines, coroutines are so it can load frames asyhnchronously when ready
+                animated_ghost_cache = new AnimationCache(this); 
                 string animatedGhostPath = Path.Combine(PluginPath, "animated");
                 animated_ghost_cache.Initialize(animatedGhostPath);
             }

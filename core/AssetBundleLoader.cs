@@ -3,6 +3,8 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using System.Text;
+
 
 namespace ArtExpander.Core
 {
@@ -11,8 +13,72 @@ namespace ArtExpander.Core
         private AssetBundle _bundle;
         private readonly string _bundlePath;
         private readonly string _rootPath;
-        private readonly bool _loadFromBundle;
+        private bool _loadFromBundle;
         private string[] _allAssetNames;
+
+       private static (bool isValid, string compression) CheckAssetBundle(string filePath)
+        {
+            string ReadNullTerminatedString(BinaryReader reader)
+            {
+                var bytes = new List<byte>();
+                byte b;
+                while ((b = reader.ReadByte()) != 0)
+                {
+                    bytes.Add(b);
+                }
+                return Encoding.UTF8.GetString(bytes.ToArray());
+            }
+            const string UNITY_FS_MAGIC = "UnityFS";
+            using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            using (BinaryReader reader = new BinaryReader(fs, Encoding.UTF8))
+            {
+                var actualFileSize = new FileInfo(filePath).Length;
+                Console.WriteLine($"Actual file size: {actualFileSize:N0} bytes\n");
+
+                // Read signature (8 bytes)
+                byte[] signatureBytes = reader.ReadBytes(8);
+                string signature = Encoding.ASCII.GetString(signatureBytes).TrimEnd('\0');
+                if (!signature.StartsWith(UNITY_FS_MAGIC))
+                {
+                    return (false, "Unknown");
+                }
+
+                // Read format version (should be just 1 byte, skip the rest)
+                byte formatVersion = reader.ReadByte();
+                reader.ReadBytes(3); // Skip padding
+
+                // Read Unity version string (null-terminated)
+                var unityVersion = ReadNullTerminatedString(reader);
+
+                // Read generator version string (null-terminated)
+                var generatorVersion = ReadNullTerminatedString(reader);
+
+                // Read file size and block info
+                // Reading bytes manually to control byte order
+                byte[] fileSizeBytes = reader.ReadBytes(8);
+                byte[] compressedSizeBytes = reader.ReadBytes(4);
+                byte[] uncompressedSizeBytes = reader.ReadBytes(4);
+                byte[] flagsBytes = reader.ReadBytes(4);
+
+                // Convert values maintaining proper byte order
+                long fileSize = BitConverter.ToInt64(fileSizeBytes, 0);
+                uint compressedBlocksInfoSize = BitConverter.ToUInt32(compressedSizeBytes, 0);
+                uint uncompressedBlocksInfoSize = BitConverter.ToUInt32(uncompressedSizeBytes, 0);
+                uint flags = BitConverter.ToUInt32(flagsBytes, 0);
+
+                // Extract compression type from flags (bits 16-17)
+                int compressionType = (int)((flags >> 16) & 0x3);
+                string compressionName = compressionType switch
+                {
+                    0 => "None",
+                    1 => "LZMA",
+                    2 => "LZ4",
+                    3 => "LZ4HC",
+                    _ => "Unknown"
+                };
+                return (true,compressionName);
+            }
+        }
 
         public AssetBundleLoader(string rootPath, string bundleSuffix)
         {
@@ -21,14 +87,39 @@ namespace ArtExpander.Core
             _loadFromBundle = File.Exists(_bundlePath);
             if (_loadFromBundle)
             {
-                _bundle = AssetBundle.LoadFromFile(_bundlePath);
-                // For asset bundles, get all asset names and find first PNG
-                _allAssetNames = _bundle.GetAllAssetNames();
-                Plugin.Logger.LogWarning($"Loaded from bundle {_bundlePath}");
+                try
+                {
+                   bool correct_format = false;
+                   string compression_type = "Unknown";
+                   (correct_format,compression_type) = CheckAssetBundle(_bundlePath);
+                   
+                   if (!correct_format){
+                       Plugin.Logger.LogError($"!!! AssetBundle not in a readable unity 2021.3.38f format. Please rebuild bundle. Filepath: {_bundlePath}");
+                       _loadFromBundle=false;
+                       return;
+                   }
+                   
+                    if (compression_type != "None" && compression_type != "LZ4"){
+                        Plugin.Logger.LogError($"!!! ASSETBUNDLE NOT IN LZ4 format. compression_type is {compression_type} Please package in LZ4 or UNCOMPRESSED for better performance.");
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Logger.LogError($"Failed to check or load bundle {_bundlePath}: {ex.Message}");
+                    _loadFromBundle = false;
+                }
             }
-            else{
+            else
+            {
                 Plugin.Logger.LogWarning($"Failed to load from bundle. File {_bundlePath} not found.");
+                _loadFromBundle = false;
             }
+
+            _bundle = AssetBundle.LoadFromFile(_bundlePath);
+            // For asset bundles, get all asset names and find first PNG
+            _allAssetNames = _bundle.GetAllAssetNames();
+
         }
 
         public string[] GetAllAssetNames()

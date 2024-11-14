@@ -1,0 +1,56 @@
+/*
+Unity Asset Bundle Format Notes (Unity 2021.3.x)
+----------------------------------------------
+
+FILE HEADER STRUCTURE
+-------------------
+Offset  Size    Description
+0x00    8       Signature: "UnityFS\0" (includes null terminator)
+0x08    4       Format version: First byte is version (8), rest is padding
+0x0C    var     Unity version string (null-terminated, e.g. "5.x.x")
+var     var     Generator version string (null-terminated, e.g. "2021.3.38f1")
+var     8       File size (mixed endian)
+var     4       Compressed blocks info size (reverse byte order)
+var     4       Uncompressed blocks info size (reverse byte order)
+var     4       Flags (reverse byte order)
+
+KEY INSIGHTS
+-----------
+1. String Reading:
+   - Strings are null-terminated instead of length-prefixed
+   - After each string, there may be padding to align to 4-byte boundaries
+
+2. Byte Order Quirks:
+   - Most numeric values are stored in reverse byte order
+   - File size appears to use a mixed endian format
+   - For 4-byte values (like sizes and flags), reverse the bytes before interpreting
+
+3. Flags and Compression:
+   - Compression type is stored in bits 1-2 of the flags (after byte reversal)
+   - Compression types:
+     0 = None
+     1 = LZMA
+     2 = LZ4
+     3 = LZ4HC
+
+4. Version Information:
+   - Unity version might show as "5.x.x" even for Unity 2021
+   - Generator version shows the actual Unity version used
+
+5. Gotchas:
+   - The format version is just 1 byte (ignore the other 3 bytes)
+   - Don't trust the file size in the header - it might not match actual file size
+   - Always check for null terminators when reading strings
+   - Be careful with byte alignment after strings
+
+Example of first 64 bytes from a Unity 2021.3.38f1 asset bundle:
+55 6E 69 74 79 46 53 00   "UnityFS\0"
+00 00 00 08               Format version (8 + padding)
+35 2E 78 2E 78 00         "5.x.x\0"
+32 30 32 31 2E 33 2E 33   "2021.3.38f1\0"
+38 66 31 00
+...
+
+This format appears to be consistent across Unity 2021.3.x versions, though
+it may vary in other major versions of Unity.
+*/
