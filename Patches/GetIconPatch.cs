@@ -13,19 +13,18 @@ public class GetIconPatch
 {
     public static bool Prefix(MonsterData __instance, ECardExpansionType cardExpansionType, ref Sprite __result)
     {
+        var cardData = CardUISetCardPatch.CardDataTracker.GetCurrentCardData();
+        if (cardData == null) return true; // Fall back to original method
 
-        var (borderType, isDestiny, isFoil) = CardUISetCardPatch.CardDataTracker.GetCurrentCardInfo();
-            
         string artPath = Plugin.art_cache.ResolveArtPath(
-            __instance.MonsterType,
-            borderType,
-            cardExpansionType,
-            isDestiny,
-            isFoil
+            cardData.monsterType,
+            cardData.borderType,
+            cardData.expansionType,
+            cardData.isDestiny
         );
+
         if (!string.IsNullOrEmpty(artPath))
         {
-
             var customSprite = Plugin.art_cache.LoadSprite(artPath);
             if (customSprite != null)
             {

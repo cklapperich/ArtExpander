@@ -37,7 +37,9 @@
       <HintPath>lib\UnityEngine.UI.dll</HintPath>
     </Reference>
     <Compile Remove="references/**/*.cs" />
+    <Compile Remove="reference_code/**/*.cs" />
     <!-- But keep it in the project -->
     <None Include="references/**/*.cs" />
+    <None Include="reference_code/**/*.cs" />
   </ItemGroup>  
 </Project>

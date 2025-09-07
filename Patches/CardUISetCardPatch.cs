@@ -25,13 +25,9 @@ namespace ArtExpander.Patches
                 currentCardData = null;
             }
 
-            public static (ECardBorderType borderType, bool isDestiny, bool isFoil) GetCurrentCardInfo()
-            {   
-                if (currentCardData != null)
-                {
-                    return (currentCardData.borderType, currentCardData.isDestiny, currentCardData.isFoil);
-                }
-                return (ECardBorderType.Base, false, false);
+            public static CardData GetCurrentCardData()
+            {
+                return currentCardData;
             }
         }
 
