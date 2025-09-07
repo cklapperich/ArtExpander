@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>ArtExpander</AssemblyName>
     <Product>Art Expander</Product>
-    <Version>3.4.1</Version>
+    <Version>3.5.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
