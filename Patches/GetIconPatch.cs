@@ -14,10 +14,10 @@ public class GetIconPatch
     public static bool Prefix(MonsterData __instance, ECardExpansionType cardExpansionType, ref Sprite __result)
     {
 
-        var (borderType, isDestiny, isFoil) = CardUISetCardPatch.CardDataTracker.GetCurrentCardInfo();
+        var (borderType, isDestiny, isFoil, monsterType) = CardUISetCardPatch.CardDataTracker.GetCurrentCardInfo();
             
         string artPath = Plugin.art_cache.ResolveArtPath(
-            __instance.MonsterType,
+            monsterType,
             borderType,
             cardExpansionType,
             isDestiny,
