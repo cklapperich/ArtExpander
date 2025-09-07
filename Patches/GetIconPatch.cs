@@ -20,7 +20,8 @@ public class GetIconPatch
             cardData.monsterType,
             cardData.borderType,
             cardData.expansionType,
-            cardData.isDestiny
+            cardData.isDestiny,
+            cardData.isFoil
         );
 
         if (!string.IsNullOrEmpty(artPath))

@@ -1,7 +1,6 @@
 using System;
 using HarmonyLib;
 using UnityEngine;
-using MonoMod.RuntimeDetour;  // If needed for Harmony patches
 
 namespace ArtExpander.Patches
 {
