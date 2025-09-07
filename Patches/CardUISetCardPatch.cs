@@ -24,8 +24,8 @@ namespace ArtExpander.Patches
                 currentCardData = null;
             }
 
-            public static CardData GetCurrentCardData()
-            {
+            public static CardData GetCurrentCardInfo()
+            {   
                 return currentCardData;
             }
         }

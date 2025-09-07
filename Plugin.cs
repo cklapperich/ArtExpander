@@ -18,6 +18,7 @@ namespace ArtExpander
         private readonly Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         internal static string PluginPath;
         internal static ArtCache art_cache = new ArtCache();
+        internal static ArtCache foilmask_cache = new ArtCache();
 
         // Single configuration entry for animation toggle
         internal static ConfigEntry<bool> EnableAnimations;
@@ -52,6 +53,11 @@ namespace ArtExpander
             }
 
             art_cache.Initialize(cardArtPath);
+            
+            string foilmaskPath = Path.Combine(PluginPath, "foilmask");
+            foilmask_cache.Initialize(foilmaskPath);
+            Logger.LogInfo("Foilmask cache initialization complete. Contents:");
+            foilmask_cache.LogCacheContents();
             
             harmony.PatchAll();
             Logger.LogInfo("Patches applied!");
