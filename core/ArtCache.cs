@@ -7,25 +7,41 @@ using ArtExpander.Core;
 
 namespace ArtExpander.Core {
     public class ArtCache : IDisposable {
+        public const EMonsterType FOILMASK = (EMonsterType)(-999);
         private Dictionary<string, Sprite> _imageCache = new Dictionary<string, Sprite>();
         private readonly Dictionary<(EMonsterType, ECardBorderType, ECardExpansionType, bool), string> _resolvedPathCache = new();
         private string _baseArtPath;
         private AssetBundleLoader _bundleLoader;
 
         public string ResolveArtPath(
-            EMonsterType monsterType, 
-            ECardBorderType borderType, 
-            ECardExpansionType expansionType, 
+            EMonsterType monsterType,
+            ECardBorderType borderType,
+            ECardExpansionType expansionType,
             bool isBlackGhost,
             bool isFoil = false)
         {
-            return CardAssetResolver.ResolvePathFromCardInfo(
-                _resolvedPathCache, 
-                monsterType, 
+            // First try to find the specific monster
+            string result = CardAssetResolver.ResolvePathFromCardInfo(
+                _resolvedPathCache,
+                monsterType,
                 borderType,
-                expansionType, 
+                expansionType,
                 isBlackGhost,
                 isFoil);
+
+            // If not found and this is a foil request, try foilmask fallback
+            if (result == null && isFoil)
+            {
+                result = CardAssetResolver.ResolvePathFromCardInfo(
+                    _resolvedPathCache,
+                    FOILMASK,
+                    borderType,
+                    expansionType,
+                    isBlackGhost,
+                    isFoil);
+            }
+
+            return result;
         }
 
         public void LogCacheContents()
