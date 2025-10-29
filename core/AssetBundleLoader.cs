@@ -10,14 +10,13 @@ namespace ArtExpander.Core
 {
     public class AssetBundleLoader : IDisposable
     {
-        private AssetBundle _bundle;
-        private readonly string _bundlePath;
-        private readonly string _rootPath;
-        private bool _loadFromBundle;
-        private string[] _allAssetNames;
+       private AssetBundle _bundle;
+       private bool _loadFromBundle;
+       private string[] _allAssetNames;
+       private string _rootPath;
 
        private static (bool isValid, string compression) CheckAssetBundle(string filePath)
-        {
+       {
             string ReadNullTerminatedString(BinaryReader reader)
             {
                 var bytes = new List<byte>();
@@ -79,44 +78,65 @@ namespace ArtExpander.Core
             }
         }
 
-        public AssetBundleLoader(string rootPath, string bundleSuffix)
+        public AssetBundleLoader(string bundlePath)
         {
-            _rootPath = rootPath;
-            _bundlePath = rootPath + bundleSuffix;
-            _loadFromBundle = File.Exists(_bundlePath);
+            _loadFromBundle = File.Exists(bundlePath);
+
+            if (!_loadFromBundle)
+            {
+                _rootPath = bundlePath;
+                _allAssetNames = new string[0];
+                return;
+            }
+
+            _rootPath = Path.GetDirectoryName(bundlePath);
+            bool correct_format = false;
+            string compression_type = "Unknown";
+            (correct_format, compression_type) = CheckAssetBundle(bundlePath);
+
+            if (!correct_format)
+            {
+                Plugin.Logger.LogError($"!!! AssetBundle not in a readable unity 2021.3.38f format. Please rebuild bundle. Filepath: {bundlePath}");
+                _loadFromBundle = false;
+                return;
+            }
+
+            if (compression_type != "None" && compression_type != "LZ4")
+            {
+                Plugin.Logger.LogError($"!!! ASSETBUNDLE NOT IN LZ4 format. compression_type is {compression_type} Please package in LZ4 or UNCOMPRESSED for better performance.");
+            }
+
+            _bundle = AssetBundle.LoadFromFile(bundlePath);
+            _allAssetNames = _bundle.GetAllAssetNames();
+        }
+
+        public Sprite LoadSprite(string path){
             if (_loadFromBundle)
             {
-                try
+                var sprite = _bundle.LoadAsset<Sprite>(path);
+                if (sprite == null)
                 {
-                   bool correct_format = false;
-                   string compression_type = "Unknown";
-                   (correct_format,compression_type) = CheckAssetBundle(_bundlePath);
-                   
-                   if (!correct_format){
-                       Plugin.Logger.LogError($"!!! AssetBundle not in a readable unity 2021.3.38f format. Please rebuild bundle. Filepath: {_bundlePath}");
-                       _loadFromBundle=false;
-                       return;
-                   }
-                   
-                    if (compression_type != "None" && compression_type != "LZ4"){
-                        Plugin.Logger.LogError($"!!! ASSETBUNDLE NOT IN LZ4 format. compression_type is {compression_type} Please package in LZ4 or UNCOMPRESSED for better performance.");
-                    }
-
-
-                    _bundle = AssetBundle.LoadFromFile(_bundlePath);
-                    _allAssetNames = _bundle.GetAllAssetNames();
-
+                    Plugin.Logger.LogWarning($"Failed to load sprite from bundle path {path}");
                 }
-                catch (Exception ex)
-                {
-                    Plugin.Logger.LogError($"Failed to check or load bundle {_bundlePath}: {ex.Message}");
-                    _loadFromBundle = false;
-                }
+                return sprite;
             }
             else
             {
-                Plugin.Logger.LogWarning($"Failed to load from bundle. File {_bundlePath} not found.");
-                _loadFromBundle = false;
+                // For file loading, combine with root path
+                string fullPath = Path.Combine(_rootPath, path);
+                
+                if (!File.Exists(fullPath))
+                {
+                    Plugin.Logger.LogWarning($"File does not exist at path: {fullPath}");
+                    return null;
+                }
+
+                byte[] fileData = File.ReadAllBytes(fullPath);
+                var texture = new Texture2D(2, 2, TextureFormat.RGBA32, mipChain: true);
+                texture.LoadImage(fileData);
+                return Sprite.Create(texture, 
+                    new Rect(0, 0, texture.width, texture.height),
+                    new Vector2(0.5f, 0.5f));
             }
         }
 
@@ -126,51 +146,6 @@ namespace ArtExpander.Core
         }
 
         public bool IsUsingBundle => _loadFromBundle && _bundle != null;
-
-        public Sprite LoadSprite(string path)
-        {
-            if (string.IsNullOrEmpty(path))
-            {
-                Plugin.Logger.LogWarning($"Path is null or empty  {path}");
-                return null;
-            }
-
-            try
-            {
-                if (_loadFromBundle)
-                {
-                    var sprite = _bundle.LoadAsset<Sprite>(path);
-                    if (sprite == null)
-                    {
-                        Plugin.Logger.LogWarning($"Failed to load sprite from bundle path {path}");
-                    }
-                    return sprite;
-                }
-                else
-                {
-                    // For file loading, combine with root path
-                    string fullPath = Path.Combine(_rootPath, path);
-                    
-                    if (!File.Exists(fullPath))
-                    {
-                        Plugin.Logger.LogWarning($"File does not exist at path: {fullPath}");
-                        return null;
-                    }
-
-                    byte[] fileData = File.ReadAllBytes(fullPath);
-                    var texture = new Texture2D(2, 2, TextureFormat.RGBA32, mipChain: true);
-                    texture.LoadImage(fileData);
-                    return Sprite.Create(texture, 
-                        new Rect(0, 0, texture.width, texture.height),
-                        new Vector2(0.5f, 0.5f));
-                }
-            }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogError($"Error loading sprite from {path}: {ex.Message}");
-                return null;
-            }
-        }
 
         public void Dispose()
         {

@@ -36,7 +36,7 @@ namespace ArtExpander.Core
             //     $"  MainImage: {(mainImage?.sprite != null ? "Has Sprite" : "No Sprite")}");
         }
 
-        public void Initialize(Image mainImage, Image maskImage, Image glowImage, Sprite[] frames)
+        public void Initialize(Image mainImage, Image maskImage, Image glowImage, Sprite[] frames, int fps)
         {
             // Clean up other animators first
             var others = GetComponents<GhostCardAnimatedRenderer>();
@@ -54,11 +54,12 @@ namespace ArtExpander.Core
             }
 
             LogAnimationState("Initialize");
-            
+
             this.mainImage = mainImage;
             this.maskImage = maskImage;
             this.glowImage = glowImage;
             this.frames = frames;
+            this.frameDelay = 1f / fps;
             this.pendingStart = false;
                     
             parentCardUI = GetComponentInParent<CardUI>();

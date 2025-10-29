@@ -18,21 +18,22 @@ public static class FileNameToMonsterTypeResolver
         // Strip any file extension using Path.GetFileNameWithoutExtension
         filename = Path.GetFileNameWithoutExtension(filename);
 
-        string[] expansionPrefixes = {
-            "Tetramon_", "Destiny_", "Ghost_", "Megabot_",
-            "FantasyRPG_", "CatJob_", "FoodieGO_"
-        };
-        
-        foreach (var prefix in expansionPrefixes)
-        {
-            filename = filename.Replace(prefix, "", StringComparison.OrdinalIgnoreCase);
-        }
-
         // Convert to lowercase before the switch comparison
         string lowercaseFilename = filename.ToLowerInvariant();
         
+        filename = filename.Replace("_white","").Replace("_black","");
+
+        // MAX=122 is for the max tetramon/destiny, dev added this in 0.61.4 (?) and so this broke 'max'.Ugh. Max is also megabot 1023
+        if (filename=="MAX"):
+            monsterType = EMonsterType.MAX;
+            return true;
+        elif (filename=="Max"):
+            monsterType=EMonsterType.Max;
         switch (lowercaseFilename)
         {
+            case "foilmask":
+                monsterType = (EMonsterType)(-999);
+                return true;
             case "mummy":
                 monsterType = EMonsterType.MummyMan;
                 return true;

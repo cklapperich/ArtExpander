@@ -31,27 +31,6 @@ namespace ArtExpander.Core
             Plugin.Logger.LogInfo($"Animation Cache Contents ({_animationFilePaths.Count} total animations):");
             Plugin.Logger.LogInfo("----------------------------------------");
 
-            // foreach (var cacheEntry in _animationFilePaths)
-            // {
-            //     var (monsterType, borderType, expansionType, isFoil) = cacheEntry.Key;
-            //     var frames = cacheEntry.Value;
-
-            //     Plugin.Logger.LogInfo($"Monster Type: {monsterType}");
-            //     Plugin.Logger.LogInfo($"Border Type: {borderType}");
-            //     Plugin.Logger.LogInfo($"Expansion Type: {expansionType}");
-            //     Plugin.Logger.LogInfo($"Is Foil: {isFoil}");
-            //     Plugin.Logger.LogInfo($"Frame Count: {frames.Count}");
-                
-            //     // Log the first and last frame paths as examples
-            //     if (frames.Any())
-            //     {
-            //         Plugin.Logger.LogInfo($"First Frame: {frames.First()}");
-            //         Plugin.Logger.LogInfo($"Last Frame: {frames.Last()}");
-            //     }
-                
-            //     Plugin.Logger.LogInfo("----------------------------------------");
-            // }
-
             // Log loaded animations state
             Plugin.Logger.LogInfo($"Currently loaded animations in memory: {_loadedAnimations.Count}");
             foreach (var loadedPath in _loadedAnimations.Keys)
@@ -68,32 +47,29 @@ namespace ArtExpander.Core
 
         public void Initialize(string rootPath)
         {
-            try
-            {
-                // Initialize the bundle loader with the .assets suffix
-                _bundleLoader = new AssetBundleLoader(rootPath, ".assets");
-                if (_bundleLoader.IsUsingBundle)
-                {
-                    ScanAnimationPaths(_bundleLoader.GetAllAssetNames());
-                }
-                else
-                {
-                    // Verify root path exists
-                    if (!Directory.Exists(rootPath))
-                    {
-                        Plugin.Logger.LogError($"Directory does not exist at {rootPath}. failed to initialize AnimationCache");
-                        return;
+            // Try bundle first: animated.assets in parent directory
+            string bundlePath = Path.Combine(Path.GetDirectoryName(rootPath), "animated.assets");
 
-                    }
-                    ScanAnimationPaths(Directory.GetFiles(rootPath, "*.png", SearchOption.AllDirectories));
-                }
-            }
-            catch (Exception ex) when (ex is not ArgumentNullException && ex is not DirectoryNotFoundException)
+            // Initialize the bundle loader
+            _bundleLoader = new AssetBundleLoader(bundlePath);
+            if (_bundleLoader.IsUsingBundle)
             {
-                Plugin.Logger.LogError($"Error during AnimationCache initialization: {ex.Message}");
-                _bundleLoader?.Dispose();
+                ScanAnimationPaths(_bundleLoader.GetAllAssetNames());
             }
-            //LogCacheContents();
+            else
+            {
+                // Fall back to directory: pass rootPath to AssetBundleLoader for file loading
+                _bundleLoader = new AssetBundleLoader(rootPath);
+
+                // Verify root path exists
+                if (!Directory.Exists(rootPath))
+                {
+                    Plugin.Logger.LogError($"Directory does not exist at {rootPath}. failed to initialize AnimationCache");
+                    return;
+
+                }
+                ScanAnimationPaths(Directory.GetFiles(rootPath, "*.png", SearchOption.AllDirectories));
+            }
         }
 
         private void ScanAnimationPaths(IEnumerable<string> paths)
@@ -102,40 +78,43 @@ namespace ArtExpander.Core
 
             // Filter for PNG files if not already filtered
             var pngPaths = paths.Where(path => path.EndsWith(".png", StringComparison.OrdinalIgnoreCase));
-            
+
             // Group files by their directory to handle multiple animations
-            var framesByDirectory = pngPaths.GroupBy(Path.GetDirectoryName);
-            //Plugin.Logger.LogWarning(framesByDirectory);
+            // Asset bundles use forward slashes, need to handle both path formats
+            var framesByDirectory = pngPaths.GroupBy(path => {
+                string dir = Path.GetDirectoryName(path);
+                // Asset bundles may return null or empty for GetDirectoryName, extract manually
+                if (string.IsNullOrEmpty(dir))
+                {
+                    int lastSlash = Math.Max(path.LastIndexOf('/'), path.LastIndexOf('\\'));
+                    if (lastSlash > 0)
+                        dir = path.Substring(0, lastSlash);
+                }
+                return dir;
+            });
+
             foreach (var directory in framesByDirectory)
             {
-                //Plugin.Logger.LogWarning("================================");
-                // Needed for version 3.2 compatibility where people can name things _black or _white
-                string monstertype_string = directory.Key.Replace("_white","").Replace("_black","");
-                //Plugin.Logger.LogWarning(directory);
-                //Plugin.Logger.LogWarning(monstertype_string);
-                if (!FileNameToMonsterTypeResolver.TryResolveMonsterType(monstertype_string, out EMonsterType monsterType))
+                if (!FileNameToMonsterTypeResolver.TryResolveMonsterType(directory.Key, out EMonsterType monsterType))
                 {
                     Plugin.Logger.LogWarning($"Could not resolve monster type for directory: {directory.Key}");
                     continue;
                 }
-                //Plugin.Logger.LogWarning(monsterType);
 
                 // Use the first file to determine the card properties
                 var firstFile = directory.First();
                 var cardResolution = CardAssetResolver.CardInfoFromPath(firstFile);
-                
+
                 var cacheKey = (monsterType, cardResolution.BorderType, cardResolution.ExpansionType, cardResolution.IsFoil);
 
                 // Store sorted frame paths
-                var sortedFrames = directory.OrderBy(p => 
+                var sortedFrames = directory.OrderBy(p =>
                 {
                     var filename = Path.GetFileNameWithoutExtension(p);
                     return int.TryParse(filename, out int frameNum) ? frameNum : int.MaxValue;
                 }).ToList();
 
                 _animationFilePaths[cacheKey] = sortedFrames;
-
-                //Plugin.Logger.LogInfo($"Cached {sortedFrames.Count} frame paths for {directory.Key}");
             }
 
             Plugin.Logger.LogInfo($"Scanning complete. Found {_animationFilePaths.Count} animation sets");

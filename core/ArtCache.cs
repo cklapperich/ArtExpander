@@ -88,107 +88,86 @@ namespace ArtExpander.Core {
 
         public void Initialize(string basePath)
         {
+            // Detect if this is a .assets bundle or a directory
+            bool isBundlePath = basePath.EndsWith(".assets", StringComparison.OrdinalIgnoreCase);
             _baseArtPath = basePath;
-
-            try
+            _bundleLoader = new AssetBundleLoader(basePath);
+            if (isBundlePath)
             {
-                // Initialize the bundle loader with the .assets suffix
-                _bundleLoader = new AssetBundleLoader(basePath, ".assets");
-                
                 if (_bundleLoader.IsUsingBundle)
                 {
-                    Plugin.Logger.LogWarning($"Loaded cardart.assets at {basePath}.assets");
+                    Plugin.Logger.LogWarning($"Loaded asset bundle: {basePath}");
                     ScanArtPaths(_bundleLoader.GetAllAssetNames());
                 }
                 else
                 {
-                    // Verify base path exists
-                    if (!Directory.Exists(basePath))
-                    {
-                        Plugin.Logger.LogError($"cardart directory does not exist at {basePath}. failed to initialize ArtCache.");
-                        return;
-                    }
+                    Plugin.Logger.LogWarning($"Failed to load asset bundle at {basePath}");
+                    _bundleLoader?.Dispose();
+                    _bundleLoader = null;
+                }
+                return;
+            }
 
-                    var allFiles = new List<string>();
-                    var artFolders = Directory.GetDirectories(_baseArtPath);
-                    
-                    foreach (var folder in artFolders)
-                    {
-                        // Get all subfolders including the root folder
-                        var allFolders = new List<string> { folder };
-                        allFolders.AddRange(Directory.GetDirectories(folder, "*", SearchOption.AllDirectories));
-                        
-                        foreach (var currentFolder in allFolders)
-                        {
-                            // Skip if the folder path contains 'animated'
-                            if (currentFolder.Contains("animated", StringComparison.OrdinalIgnoreCase))
-                            {
-                                Plugin.Logger.LogWarning($"Skipping animated folder: {currentFolder}");
-                                continue;
-                            }
+            if (!Directory.Exists(basePath))
+            {
+                Plugin.Logger.LogError($"Directory does not exist at {basePath}. Failed to initialize ArtCache.");
+                return;
+            }
 
-                            // Get all PNG files
-                            allFiles.AddRange(Directory.GetFiles(currentFolder, "*.png")
-                                .Concat(Directory.GetFiles(currentFolder, "*.PNG"))
-                                .Distinct(StringComparer.OrdinalIgnoreCase));
-                        }
-                    }
-                    
-                    ScanArtPaths(allFiles);
+            var allFiles = new List<string>();
+            var artFolders = Directory.GetDirectories(basePath);
+
+            foreach (var folder in artFolders)
+            {
+                // Get all subfolders including the root folder
+                var allFolders = new List<string> { folder };
+                allFolders.AddRange(Directory.GetDirectories(folder, "*", SearchOption.AllDirectories));
+
+                foreach (var currentFolder in allFolders)
+                {
+                    allFiles.AddRange(Directory.GetFiles(currentFolder, "*.png")
+                        .Concat(Directory.GetFiles(currentFolder, "*.PNG"))
+                        .Distinct(StringComparer.OrdinalIgnoreCase));
                 }
             }
-            catch (Exception ex) when (ex is not ArgumentNullException && ex is not DirectoryNotFoundException)
-            {
-                Plugin.Logger.LogError($"Error during ArtCache initialization: {ex.Message}");
-                _bundleLoader?.Dispose();
-            }
-            //LogCacheContents();
+
+            Plugin.Logger.LogInfo($"Loading from directory: {basePath}");
+            ScanArtPaths(allFiles);
         }
 
         private void ScanArtPaths(IEnumerable<string> paths)
         {
-            _resolvedPathCache.Clear();
-
-            // Filter for PNG files if not already filtered
             var pngPaths = paths.Where(path => 
                 path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) && 
                 !path.Contains("animated", StringComparison.OrdinalIgnoreCase));
 
             foreach (var pngFile in pngPaths)
             {
-                try
-                {
-                    // Get card resolution result
-                    var resolutionResult = CardAssetResolver.CardInfoFromPath(pngFile);
+                // Get card resolution result
+                var resolutionResult = CardAssetResolver.CardInfoFromPath(pngFile);
 
-                    // Try to resolve monster type from filename
-                    if (FileNameToMonsterTypeResolver.TryResolveMonsterType(
-                        Path.GetFileNameWithoutExtension(pngFile), 
-                        out EMonsterType monsterType))
+                // Try to resolve monster type from filename
+                if (FileNameToMonsterTypeResolver.TryResolveMonsterType(
+                    Path.GetFileNameWithoutExtension(pngFile), 
+                    out EMonsterType monsterType))
+                {
+                    var cacheKey = (
+                        monsterType,
+                        resolutionResult.BorderType,
+                        resolutionResult.ExpansionType,
+                        resolutionResult.IsFoil
+                    );
+                    
+                    if (!_resolvedPathCache.ContainsKey(cacheKey))
                     {
-                        var cacheKey = (
-                            monsterType,
-                            resolutionResult.BorderType,
-                            resolutionResult.ExpansionType,
-                            resolutionResult.IsFoil
-                        );
-                        
-                        if (!_resolvedPathCache.ContainsKey(cacheKey))
-                        {
-                            _resolvedPathCache[cacheKey] = pngFile;
-                        }
-                    }
-                    else
-                    {
-                        Plugin.Logger.LogWarning($"Failed to parse Monster Name {pngFile}");
+                        _resolvedPathCache[cacheKey] = pngFile;
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    Plugin.Logger.LogWarning($"Failed to process file {pngFile}: {ex.Message}");
+                    Plugin.Logger.LogWarning($"Failed to parse Monster Name {pngFile}");
                 }
             }
-
             Plugin.Logger.LogInfo($"Scanning complete. Found {_resolvedPathCache.Count} art assets");
         }
 
