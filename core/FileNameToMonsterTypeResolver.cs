@@ -24,11 +24,17 @@ public static class FileNameToMonsterTypeResolver
         filename = filename.Replace("_white","").Replace("_black","");
 
         // MAX=122 is for the max tetramon/destiny, dev added this in 0.61.4 (?) and so this broke 'max'.Ugh. Max is also megabot 1023
-        if (filename=="MAX"):
+        if (filename == "MAX")
+        {
             monsterType = EMonsterType.MAX;
             return true;
-        elif (filename=="Max"):
-            monsterType=EMonsterType.Max;
+        }
+        else if (filename == "Max")
+        {
+            monsterType = EMonsterType.Max;
+            return true;
+        }
+
         switch (lowercaseFilename)
         {
             case "foilmask":
