@@ -11,7 +11,7 @@ namespace ArtExpander.Core {
     public const ECardBorderType GhostBlackBorder = (ECardBorderType)(-3);
     public class CardFolderResolutionResult {
         public ECardExpansionType ExpansionType = ECardExpansionType.None;
-        public ECardBorderType BorderType = (ECardBorderType)(-1); // NoneBorder
+        public ECardBorderType BorderType = NoneBorder;
         public bool IsFoil = false;
     }
 
