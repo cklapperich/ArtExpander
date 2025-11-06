@@ -93,21 +93,33 @@ namespace ArtExpander.Core
                 return dir;
             });
 
+            // Process each animation directory (one directory = one animation set)
+            // Example directory.Key: "animated/default/Tetramon/PiggyA" or "animated/default/Tetramon/1"
             foreach (var directory in framesByDirectory)
             {
-                if (!FileNameToMonsterTypeResolver.TryResolveMonsterType(directory.Key, out EMonsterType monsterType))
+                // Extract just the folder name from the full path (e.g., "animated/Tetramon/1" -> "1")
+                // This is the monster identifier, which can be either:
+                // - A numeric ID: "1" -> resolves to PiggyA via FileNameToMonsterTypeResolver
+                // - A monster name: "PiggyA" -> resolves to PiggyA via FileNameToMonsterTypeResolver
+                // IMPORTANT: We must extract ONLY the folder name, not the full path, because
+                // TryResolveMonsterType expects a simple identifier, not a path with slashes
+                string folderName = Path.GetFileName(directory.Key);
+                if (!FileNameToMonsterTypeResolver.TryResolveMonsterType(folderName, out EMonsterType monsterType))
                 {
-                    Plugin.Logger.LogWarning($"Could not resolve monster type for directory: {directory.Key}");
+                    Plugin.Logger.LogWarning($"Could not resolve monster type for directory: {directory.Key} (folder: {folderName})");
                     continue;
                 }
 
-                // Use the first file to determine the card properties
+                // Use the first file's full path to determine card properties (border, expansion, foil)
+                // Example: "animated/default/Tetramon/1/1.png"
+                // CardInfoFromPath will extract: Expansion=Tetramon, Border=None, Foil=false
+                // (Note: CardInfoFromPath skips numeric folders like "1" to avoid misinterpreting them)
                 var firstFile = directory.First();
                 var cardResolution = CardAssetResolver.CardInfoFromPath(firstFile);
 
                 var cacheKey = (monsterType, cardResolution.BorderType, cardResolution.ExpansionType, cardResolution.IsFoil);
 
-                // Store sorted frame paths
+                // Sort frames numerically by filename (1.png, 2.png, 3.png, etc.)
                 var sortedFrames = directory.OrderBy(p =>
                 {
                     var filename = Path.GetFileNameWithoutExtension(p);
@@ -120,16 +132,16 @@ namespace ArtExpander.Core
             Plugin.Logger.LogInfo($"Scanning complete. Found {_animationFilePaths.Count} animation sets");
         }
 
-     public bool RequestAnimationForCard(EMonsterType monsterType, ECardBorderType borderType, 
+     public bool RequestAnimationForCard(EMonsterType monsterType, ECardBorderType borderType,
         ECardExpansionType expansionType, bool isBlackGhost, bool isFoil, Action<Sprite[]> onFramesReady)
     {
         // Get the list of frame paths for this card variant
         List<string> framePaths = CardAssetResolver.ResolvePathFromCardInfo(
-            _animationFilePaths, 
-            monsterType, 
-            borderType, 
-            expansionType, 
-            isBlackGhost, 
+            _animationFilePaths,
+            monsterType,
+            borderType,
+            expansionType,
+            isBlackGhost,
             isFoil);
 
         if (framePaths == null || !framePaths.Any())

@@ -66,9 +66,9 @@ namespace ArtExpander.Core {
                 {
                     string borderName = borderGroup.Key switch
                     {
-                        (ECardBorderType)(-1) => "None",
-                        (ECardBorderType)(-2) => "GhostWhite",
-                        (ECardBorderType)(-3) => "GhostBlack",
+                        CardAssetResolver.NoneBorder => "None",
+                        CardAssetResolver.GhostWhiteBorder => "GhostWhite",
+                        CardAssetResolver.GhostBlackBorder => "GhostBlack",
                         _ => borderGroup.Key.ToString()
                     };
                     
