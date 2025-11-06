@@ -53,7 +53,7 @@ namespace ArtExpander
             string cardArtPath = Path.Combine(PluginPath, "cardart");
             if (EnableAnimations.Value)
             {
-                //needs a reference to a monobehavior so it can launch coroutines, coroutines are so it can load frames asyhnchronously when ready
+                //needs a reference to a monobehavior so it can launch coroutines, coroutines are so it can load frames asynchronously when ready
                 animated_ghost_cache = new AnimationCache(this); 
                 string animatedGhostPath = Path.Combine(PluginPath, "animated");
                 animated_ghost_cache.Initialize(animatedGhostPath);
