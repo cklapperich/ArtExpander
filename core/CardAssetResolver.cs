@@ -15,10 +15,21 @@ namespace ArtExpander.Core {
         public bool IsFoil = false;
     }
 
+    /// <summary>
+    /// Extracts card properties (border type, expansion type, foil status) from a file path.
+    /// Examines each folder in the path to determine card properties.
+    ///
+    /// IMPORTANT: Numeric-only folders are skipped to prevent misinterpreting monster IDs
+    /// as enum values. For example, in path "animated/Tetramon/1/1.png":
+    /// - "Tetramon" correctly sets ExpansionType = Tetramon
+    /// - "1" is SKIPPED (it's a monster ID, not a card property)
+    /// Without this check, "1" would be parsed as ECardExpansionType.Destiny (enum value 1),
+    /// causing a mismatch between cached and requested expansion types.
+    /// </summary>
     public static CardFolderResolutionResult CardInfoFromPath(string filepath) {
         var result = new CardFolderResolutionResult();
         // Split path into components and examine each folder
-        string[] folders = filepath.Split(new[] { '/', '\\' }, 
+        string[] folders = filepath.Split(new[] { '/', '\\' },
                                         StringSplitOptions.RemoveEmptyEntries);
 
         foreach(string folder in folders) {
@@ -26,8 +37,15 @@ namespace ArtExpander.Core {
                 continue;
             }
 
+            // Skip numeric-only folders (these are monster IDs, not card properties)
+            // Without this, "1" in "animated/Tetramon/1/1.png" would be parsed as
+            // ECardExpansionType(1) = Destiny, overwriting the correct "Tetramon" expansion
+            if(int.TryParse(folder, out _)) {
+                continue;
+            }
+
             // Check for foil
-            if(folder.Contains("foil", StringComparison.OrdinalIgnoreCase)) { 
+            if(folder.Contains("foil", StringComparison.OrdinalIgnoreCase)) {
                 result.IsFoil = true;
                 continue;
             }
@@ -35,7 +53,7 @@ namespace ArtExpander.Core {
             // Try expansion type
             if(Enum.TryParse<ECardExpansionType>(folder, true, out var expansionType)) {
                 result.ExpansionType = expansionType;
-                continue;  
+                continue;
             }
 
             // Try border type using existing method

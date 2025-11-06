@@ -22,9 +22,9 @@ echo "[INFO] Source DLL path: $SOURCE_DLL"
 echo "[INFO] BepInEx plugins path: $BEPINEX_PLUGINS"
 echo "[INFO] Steam plugins path: $STEAM_PLUGINS"
 
-# Build the project
+# Build the project (use solution file to avoid building test projects)
 echo "[BUILD] Building project..."
-dotnet build
+dotnet build ArtExpander.sln
 if [ $? -ne 0 ]; then
     echo "[ERROR] Build failed!"
     exit 1
