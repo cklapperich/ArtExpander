@@ -48,7 +48,7 @@ namespace ArtExpander.Core
         public void Initialize(string rootPath)
         {
             // Try bundle first: animated.assets in parent directory
-            string bundlePath = Path.Combine(Path.GetDirectoryName(rootPath), "animated.assets");
+            string bundlePath = rootPath + ".assets";
 
             // Initialize the bundle loader
             _bundleLoader = new AssetBundleLoader(bundlePath);
@@ -58,16 +58,13 @@ namespace ArtExpander.Core
             }
             else
             {
-                // Fall back to directory: pass rootPath to AssetBundleLoader for file loading
-                _bundleLoader = new AssetBundleLoader(rootPath);
-
                 // Verify root path exists
                 if (!Directory.Exists(rootPath))
                 {
-                    Plugin.Logger.LogError($"Directory does not exist at {rootPath}. failed to initialize AnimationCache");
+                    Plugin.Logger.LogInfo($"Directory does not exist at {rootPath}. failed to initialize AnimationCache");
                     return;
-
                 }
+                // Fall back to directory: pass rootPath to AssetBundleLoader for file loading
                 ScanAnimationPaths(Directory.GetFiles(rootPath, "*.png", SearchOption.AllDirectories));
             }
         }

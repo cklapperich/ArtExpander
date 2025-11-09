@@ -24,12 +24,6 @@ public class MonsterData_ScriptableObject : ScriptableObject
 
     public List<Color> m_RarityColor;
 
-    public List<Sprite> m_CardBorderList;
-
-    public List<Sprite> m_CardBGList;
-
-    public List<Sprite> m_CardFrontImageList;
-
     public List<Sprite> m_CardBackImageList;
 
     public List<Sprite> m_CardFoilMaskImageList;
@@ -58,27 +52,7 @@ public class MonsterData_ScriptableObject : ScriptableObject
 
     public Color GetRarityColor(ERarity rarity)
     {
-        //IL_0007: Unknown result type (might be due to invalid IL or missing references)
         return m_RarityColor[(int)rarity];
-    }
-
-    public Sprite GetCardBorderSprite(ERarity rarity)
-    {
-        return m_CardBorderList[(int)rarity];
-    }
-
-    public Sprite GetCardBGSprite(EElementIndex element)
-    {
-        if (element == EElementIndex.None)
-        {
-            return null;
-        }
-        return m_CardBGList[(int)element];
-    }
-
-    public Sprite GetCardFrontSprite(EElementIndex elementIndex)
-    {
-        return m_CardFrontImageList[(int)elementIndex];
     }
 
     public Sprite GetGradedCardScratchTexture(int cardGrade)

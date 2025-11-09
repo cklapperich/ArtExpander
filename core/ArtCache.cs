@@ -86,8 +86,12 @@ namespace ArtExpander.Core {
             Plugin.Logger.LogInfo("\n=== End Art Cache Contents ===");
         }
 
-        public void Initialize(string basePath)
+        public bool Initialize(string basePath)
         {
+            if (!File.Exists(basePath) && !Directory.Exists(basePath)){
+                Plugin.Logger.LogInfo($"Failed to find {basePath}");
+                return false;
+            }
             // Detect if this is a .assets bundle or a directory
             bool isBundlePath = basePath.EndsWith(".assets", StringComparison.OrdinalIgnoreCase);
             _baseArtPath = basePath;
@@ -104,14 +108,10 @@ namespace ArtExpander.Core {
                     Plugin.Logger.LogWarning($"Failed to load asset bundle at {basePath}");
                     _bundleLoader?.Dispose();
                     _bundleLoader = null;
+                    return false;
                 }
-                return;
-            }
-
-            if (!Directory.Exists(basePath))
-            {
-                Plugin.Logger.LogError($"Directory does not exist at {basePath}. Failed to initialize ArtCache.");
-                return;
+                Plugin.Logger.LogInfo($"Loaded from directory: {basePath}");
+                return true;
             }
 
             var allFiles = new List<string>();
@@ -131,8 +131,9 @@ namespace ArtExpander.Core {
                 }
             }
 
-            Plugin.Logger.LogInfo($"Loading from directory: {basePath}");
+            Plugin.Logger.LogInfo($"Loaded from directory: {basePath}");
             ScanArtPaths(allFiles);
+            return true;
         }
 
         private void ScanArtPaths(IEnumerable<string> paths)

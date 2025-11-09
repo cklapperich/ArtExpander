@@ -7,7 +7,6 @@ namespace ArtExpander.Core
     {
         private Image mainImage;
         private Image maskImage;
-        private Image glowImage;
         private Sprite[] frames;
         private Coroutine animationCoroutine;
         private float frameDelay = 0.1f;
@@ -36,7 +35,7 @@ namespace ArtExpander.Core
             //     $"  MainImage: {(mainImage?.sprite != null ? "Has Sprite" : "No Sprite")}");
         }
 
-        public void Initialize(Image mainImage, Image maskImage, Image glowImage, Sprite[] frames, int fps)
+        public void Initialize(Image mainImage, Sprite[] frames, int fps)
         {
             // Clean up other animators first
             var others = GetComponents<GhostCardAnimatedRenderer>();
@@ -56,8 +55,6 @@ namespace ArtExpander.Core
             LogAnimationState("Initialize");
 
             this.mainImage = mainImage;
-            this.maskImage = maskImage;
-            this.glowImage = glowImage;
             this.frames = frames;
             this.frameDelay = 1f / fps;
             this.pendingStart = false;
@@ -124,11 +121,6 @@ namespace ArtExpander.Core
             
             while (true) {
                 mainImage.sprite = frames[currentFrame];
-                maskImage.sprite = frames[currentFrame];
-                if (glowImage != null) {
-                    glowImage.sprite = frames[currentFrame];
-                }
-                
                 currentFrame = (currentFrame + 1) % frames.Length;
                 yield return new WaitForSeconds(frameDelay);
             }

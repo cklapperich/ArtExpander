@@ -29,25 +29,27 @@ public class Card3dUISpawner : CSingleton<Card3dUISpawner>
 
     private float m_DotCullLimit = 0.65f;
 
+    private float m_AngleCullLimit = 110f;
+
     private float m_SimplifyCardDistance = 2f;
 
     private float m_CullTimer;
 
     private void Awake()
     {
-        if ((Object)(object)m_Instance == (Object)null)
+        if (m_Instance == null)
         {
             m_Instance = this;
         }
-        else if ((Object)(object)m_Instance != (Object)(object)this)
+        else if (m_Instance != this)
         {
-            Object.Destroy((Object)(object)((Component)this).gameObject);
+            Object.Destroy(base.gameObject);
         }
-        Object.DontDestroyOnLoad((Object)(object)this);
+        Object.DontDestroyOnLoad(this);
         m_Card3dUIList = new List<Card3dUIGroup>();
-        for (int i = 0; i < ((Component)this).transform.childCount; i++)
+        for (int i = 0; i < base.transform.childCount; i++)
         {
-            m_Card3dUIList.Add(((Component)((Component)this).transform.GetChild(i)).gameObject.GetComponent<Card3dUIGroup>());
+            m_Card3dUIList.Add(base.transform.GetChild(i).gameObject.GetComponent<Card3dUIGroup>());
         }
         for (int j = 0; j < 30; j++)
         {
@@ -55,37 +57,25 @@ public class Card3dUISpawner : CSingleton<Card3dUISpawner>
         }
         for (int k = 0; k < m_Card3dUIList.Count; k++)
         {
-            ((Component)m_Card3dUIList[k]).gameObject.SetActive(false);
+            m_Card3dUIList[k].gameObject.SetActive(value: false);
         }
         UpdateSimplifyCardDistance();
     }
 
     private void Update()
     {
-        //IL_005a: Unknown result type (might be due to invalid IL or missing references)
-        //IL_006e: Unknown result type (might be due to invalid IL or missing references)
-        //IL_0073: Unknown result type (might be due to invalid IL or missing references)
-        //IL_0078: Unknown result type (might be due to invalid IL or missing references)
-        //IL_007b: Unknown result type (might be due to invalid IL or missing references)
-        //IL_008f: Unknown result type (might be due to invalid IL or missing references)
-        //IL_00b0: Unknown result type (might be due to invalid IL or missing references)
-        //IL_00c4: Unknown result type (might be due to invalid IL or missing references)
-        //IL_00c9: Unknown result type (might be due to invalid IL or missing references)
-        //IL_00ce: Unknown result type (might be due to invalid IL or missing references)
-        //IL_00ee: Unknown result type (might be due to invalid IL or missing references)
-        //IL_00f3: Unknown result type (might be due to invalid IL or missing references)
-        //IL_0107: Unknown result type (might be due to invalid IL or missing references)
-        //IL_010c: Unknown result type (might be due to invalid IL or missing references)
         m_CullLoopCount = 0;
         for (int i = 0; i < m_Card3dUIList.Count; i++)
         {
-            if (Object.op_Implicit((Object)(object)m_Card3dUIList[m_CullIndex]) && !m_Card3dUIList[m_CullIndex].m_IgnoreCulling)
+            if ((bool)m_Card3dUIList[m_CullIndex] && m_Card3dUIList[m_CullIndex].GetAlwaysCulling())
             {
-                Vector3 val = m_Card3dUIList[m_CullIndex].m_ScaleGrp.position - ((Component)CSingleton<InteractionPlayerController>.Instance.m_Cam).transform.position;
-                float num = Vector3.Dot(((Vector3)(ref val)).normalized, ((Component)CSingleton<InteractionPlayerController>.Instance.m_Cam).transform.forward);
-                Vector3 val2 = m_Card3dUIList[m_CullIndex].m_ScaleGrp.position - ((Component)CSingleton<InteractionPlayerController>.Instance.m_WalkerCtrl).transform.position;
-                float magnitude = ((Vector3)(ref val2)).magnitude;
-                float num2 = Vector3.Angle(m_Card3dUIList[m_CullIndex].m_ScaleGrp.TransformDirection(Vector3.forward), ((Component)CSingleton<InteractionPlayerController>.Instance.m_Cam).transform.TransformDirection(Vector3.forward));
+                m_Card3dUIList[m_CullIndex].m_CardUIAnimGrp.gameObject.SetActive(value: false);
+            }
+            else if ((bool)m_Card3dUIList[m_CullIndex] && !m_Card3dUIList[m_CullIndex].m_IgnoreCulling)
+            {
+                float num = Vector3.Dot((m_Card3dUIList[m_CullIndex].m_ScaleGrp.position - CSingleton<InteractionPlayerController>.Instance.m_Cam.transform.position).normalized, CSingleton<InteractionPlayerController>.Instance.m_Cam.transform.forward);
+                float magnitude = (m_Card3dUIList[m_CullIndex].m_ScaleGrp.position - CSingleton<InteractionPlayerController>.Instance.m_Cam.transform.position).magnitude;
+                float num2 = Vector3.Angle(m_Card3dUIList[m_CullIndex].m_ScaleGrp.TransformDirection(Vector3.forward), CSingleton<InteractionPlayerController>.Instance.m_Cam.transform.TransformDirection(Vector3.forward));
                 if (magnitude > m_SimplifyCardDistance)
                 {
                     m_Card3dUIList[m_CullIndex].m_CardUI.SetFoilCullListVisibility(isActive: false);
@@ -96,13 +86,13 @@ public class Card3dUISpawner : CSingleton<Card3dUISpawner>
                     m_Card3dUIList[m_CullIndex].m_CardUI.SetFoilCullListVisibility(isActive: true);
                     m_Card3dUIList[m_CullIndex].m_CardUI.ResetFarDistanceCull();
                 }
-                if (magnitude > 9f || (magnitude > 1f && num < m_DotCullLimit) || num2 > 110f)
+                if (magnitude > 9f || (magnitude > 1f && num < m_DotCullLimit) || num2 > m_AngleCullLimit)
                 {
-                    ((Component)m_Card3dUIList[m_CullIndex].m_CardUIAnimGrp).gameObject.SetActive(false);
+                    m_Card3dUIList[m_CullIndex].m_CardUIAnimGrp.gameObject.SetActive(value: false);
                 }
                 else
                 {
-                    ((Component)m_Card3dUIList[m_CullIndex].m_CardUIAnimGrp).gameObject.SetActive(true);
+                    m_Card3dUIList[m_CullIndex].m_CardUIAnimGrp.gameObject.SetActive(value: true);
                 }
             }
             m_CullIndex++;
@@ -126,25 +116,22 @@ public class Card3dUISpawner : CSingleton<Card3dUISpawner>
             if (!m_Card3dUIList[i].IsActive())
             {
                 m_Card3dUIList[i].ActivateCard();
-                ((Component)m_Card3dUIList[i]).gameObject.SetActive(true);
+                m_Card3dUIList[i].gameObject.SetActive(value: true);
                 return m_Card3dUIList[i];
             }
         }
         Card3dUIGroup card3dUIGroup = AddCardPrefab();
         card3dUIGroup.ActivateCard();
-        ((Component)card3dUIGroup).gameObject.SetActive(true);
+        card3dUIGroup.gameObject.SetActive(value: true);
         return card3dUIGroup;
     }
 
     private Card3dUIGroup AddCardPrefab()
     {
-        //IL_0015: Unknown result type (might be due to invalid IL or missing references)
-        //IL_001a: Unknown result type (might be due to invalid IL or missing references)
-        //IL_0031: Unknown result type (might be due to invalid IL or missing references)
-        Card3dUIGroup card3dUIGroup = Object.Instantiate<Card3dUIGroup>(m_Card3dUIPrefab, new Vector3(0f, 0f, 0f), Quaternion.identity, ((Component)this).transform);
-        ((Component)card3dUIGroup).transform.localRotation = Quaternion.identity;
-        ((Object)card3dUIGroup).name = "Card3dUIGrp_" + m_SpawnedCardCount;
-        ((Component)card3dUIGroup).gameObject.SetActive(false);
+        Card3dUIGroup card3dUIGroup = Object.Instantiate(m_Card3dUIPrefab, new Vector3(0f, 0f, 0f), Quaternion.identity, base.transform);
+        card3dUIGroup.transform.localRotation = Quaternion.identity;
+        card3dUIGroup.name = "Card3dUIGrp_" + m_SpawnedCardCount;
+        card3dUIGroup.gameObject.SetActive(value: false);
         m_Card3dUIList.Add(card3dUIGroup);
         m_SpawnedCardCount++;
         return card3dUIGroup;
@@ -152,12 +139,10 @@ public class Card3dUISpawner : CSingleton<Card3dUISpawner>
 
     public static void DisableCard(Card3dUIGroup card3dUI)
     {
-        //IL_001b: Unknown result type (might be due to invalid IL or missing references)
-        //IL_002b: Unknown result type (might be due to invalid IL or missing references)
-        ((Component)card3dUI).transform.parent = ((Component)CSingleton<Card3dUISpawner>.Instance).transform;
-        ((Component)card3dUI).transform.localPosition = Vector3.zero;
-        ((Component)card3dUI).transform.localRotation = Quaternion.identity;
-        ((Component)card3dUI).gameObject.SetActive(false);
+        card3dUI.transform.parent = CSingleton<Card3dUISpawner>.Instance.transform;
+        card3dUI.transform.localPosition = Vector3.zero;
+        card3dUI.transform.localRotation = Quaternion.identity;
+        card3dUI.gameObject.SetActive(value: false);
     }
 
     public static void AddCardToManager(Card3dUIGroup card3dUI)
@@ -180,7 +165,7 @@ public class Card3dUISpawner : CSingleton<Card3dUISpawner>
     {
         for (int i = 0; i < CSingleton<Card3dUISpawner>.Instance.m_AllCard3dUIList.Count; i++)
         {
-            if (Object.op_Implicit((Object)(object)CSingleton<Card3dUISpawner>.Instance.m_AllCard3dUIList[i].m_CardUI))
+            if ((bool)CSingleton<Card3dUISpawner>.Instance.m_AllCard3dUIList[i].m_CardUI)
             {
                 CSingleton<Card3dUISpawner>.Instance.m_AllCard3dUIList[i].m_CardUI.SetBrightness(brightness);
             }
@@ -205,7 +190,8 @@ public class Card3dUISpawner : CSingleton<Card3dUISpawner>
 
     protected void OnSettingUpdated(CEventPlayer_OnSettingUpdated evt)
     {
-        m_DotCullLimit = Mathf.Lerp(0.75f, 0.35f, CSingleton<CGameManager>.Instance.m_CameraFOVSlider);
+        m_DotCullLimit = Mathf.Lerp(0.75f, 0.15f, CSingleton<CGameManager>.Instance.m_CameraFOVSlider);
+        m_AngleCullLimit = 110f + CSingleton<CGameManager>.Instance.m_CameraFOVSlider * 40f;
         UpdateSimplifyCardDistance();
     }
 
@@ -213,11 +199,11 @@ public class Card3dUISpawner : CSingleton<Card3dUISpawner>
     {
         if (CSingleton<CGameManager>.Instance.m_QualitySettingIndex == 0)
         {
-            m_SimplifyCardDistance = 2.3f;
+            m_SimplifyCardDistance = 1.1f;
         }
         else if (CSingleton<CGameManager>.Instance.m_QualitySettingIndex == 1)
         {
-            m_SimplifyCardDistance = 1.5f;
+            m_SimplifyCardDistance = 0.75f;
         }
         else if (CSingleton<CGameManager>.Instance.m_QualitySettingIndex == 2)
         {

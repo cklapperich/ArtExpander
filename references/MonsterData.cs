@@ -106,7 +106,7 @@ public class MonsterData
         {
             return GhostIcon;
         }
-        if ((Object)(object)Icon == (Object)null)
+        if (Icon == null)
         {
             if (cardExpansionType == ECardExpansionType.None)
             {

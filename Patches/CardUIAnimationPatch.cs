@@ -27,34 +27,6 @@ namespace ArtExpander.Patches
         }
 
         /// <summary>
-        /// Determines which CardUI object should receive animation based on card properties.
-        /// Mirrors the game's logic from CardUI.SetCardUI (lines 360-427).
-        /// </summary>
-        private static CardUI DetermineTargetCardUI(CardUI instance, CardData cardData)
-        {
-            if (cardData == null || instance == null)
-                return null;
-
-            ECardBorderType borderType = cardData.GetCardBorderType();
-
-            // Ghost FullArt cards use a separate nested CardUI (m_GhostCard)
-            if (cardData.expansionType == ECardExpansionType.Ghost && borderType == ECardBorderType.FullArt)
-            {
-                return AccessTools.Field(typeof(CardUI), "m_GhostCard").GetValue(instance) as CardUI;
-            }
-            // Other FullArt cards use m_FullArtCard
-            else if (borderType == ECardBorderType.FullArt)
-            {
-                return AccessTools.Field(typeof(CardUI), "m_FullArtCard").GetValue(instance) as CardUI;
-            }
-            // Normal cards and special cards use the main instance
-            else
-            {
-                return instance;
-            }
-        }
-
-        /// <summary>
         /// Common logic for applying animations to any CardUI object.
         /// </summary>
         private static void TryApplyAnimation(
@@ -86,9 +58,7 @@ namespace ArtExpander.Patches
                 }
 
                 // Get required Image references
-                Image mainImage = AccessTools.Field(typeof(CardUI), "m_MonsterImage").GetValue(targetCardUI) as Image;
-                Image maskImage = AccessTools.Field(typeof(CardUI), "m_MonsterMaskImage").GetValue(targetCardUI) as Image;
-                Image glowImage = AccessTools.Field(typeof(CardUI), "m_MonsterGlowMask").GetValue(targetCardUI) as Image;
+                Image mainImage = AccessTools.Field(typeof(CardUI), "m_CenterFrameImage").GetValue(targetCardUI) as Image;
 
                 // Request animation from cache
                 try
@@ -99,7 +69,8 @@ namespace ArtExpander.Patches
                         expansionType: expansionType,
                         isBlackGhost: isBlackVariant,
                         isFoil: isFoil,
-                        onFramesReady: (Sprite[] frames) => {
+                        onFramesReady: (Sprite[] frames) =>
+                        {
                             try
                             {
                                 if (frames == null || frames.Length == 0)
@@ -115,7 +86,7 @@ namespace ArtExpander.Patches
                                 }
 
                                 var animator = targetCardUI.gameObject.AddComponent<GhostCardAnimatedRenderer>();
-                                animator.Initialize(mainImage, maskImage, glowImage, frames, Plugin.AnimationFPS.Value);
+                                animator.Initialize(mainImage, frames, Plugin.AnimationFPS.Value);
                             }
                             catch (Exception ex)
                             {
@@ -135,30 +106,6 @@ namespace ArtExpander.Patches
         }
 
         /// <summary>
-        /// Patch for SetGhostCardUI - handles Ghost FullArt cards specifically.
-        /// Kept for compatibility and edge cases where SetCardUI might not trigger.
-        /// </summary>
-        [HarmonyPatch("SetGhostCardUI")]
-        [HarmonyPostfix]
-        static void SetGhostCardUI_Postfix(CardUI __instance, MonsterData data, bool isBlackGhost)
-        {
-            CardData card_data = __instance.GetCardData();
-            if (card_data == null)
-                return;
-
-            var ghostCard = AccessTools.Field(typeof(CardUI), "m_GhostCard").GetValue(__instance) as CardUI;
-
-            TryApplyAnimation(
-                targetCardUI: ghostCard,
-                monsterType: data.MonsterType,
-                borderType: card_data.borderType,
-                expansionType: card_data.expansionType,
-                isBlackVariant: isBlackGhost,
-                isFoil: card_data.isFoil
-            );
-        }
-
-        /// <summary>
         /// Patch for SetCardUI - handles all card types (Normal, FullArt, Ghost, Special).
         /// This is the main entry point for applying animations to any card.
         /// </summary>
@@ -170,29 +117,14 @@ namespace ArtExpander.Patches
             if (cardData == null)
                 return;
 
-            // Skip nested FullArt/Ghost CardUI instances - we only patch the parent
-            var isNestedField = AccessTools.Field(typeof(CardUI), "m_IsNestedFullArt");
-            if (isNestedField != null)
-            {
-                bool isNested = (bool)isNestedField.GetValue(__instance);
-                if (isNested)
-                    return;
-            }
-
-            // Determine which CardUI object to animate based on card type
-            CardUI targetCardUI = DetermineTargetCardUI(__instance, cardData);
-
-            if (targetCardUI != null)
-            {
-                TryApplyAnimation(
-                    targetCardUI: targetCardUI,
-                    monsterType: cardData.monsterType,
-                    borderType: cardData.GetCardBorderType(),
-                    expansionType: cardData.expansionType,
-                    isBlackVariant: cardData.isDestiny,
-                    isFoil: cardData.isFoil
-                );
-            }
+            TryApplyAnimation(
+                targetCardUI: __instance,
+                monsterType: cardData.monsterType,
+                borderType: cardData.GetCardBorderType(),
+                expansionType: cardData.expansionType,
+                isBlackVariant: cardData.isDestiny,
+                isFoil: cardData.isFoil
+            );
         }
     }
 }
