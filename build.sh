@@ -9,7 +9,7 @@ CURRENT_USER="$(whoami)"
 # Define paths relative to script directory
 SOURCE_DLL="$SCRIPT_DIR/bin/Debug/netstandard2.1/ArtExpander.dll"
 BEPINEX_PLUGINS="$SCRIPT_DIR/BepInEx/plugins/ArtExpander/ArtExpander.dll"
-STEAM_PLUGINS="/home/$CURRENT_USER/.steam/debian-installation/steamapps/common/TCG Card Shop Simulator/BepInEx/plugins/ArtExpander/ArtExpander.dll"
+STEAM_PLUGINS="/home/$CURRENT_USER/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/TCG Card Shop Simulator/BepInEx/plugins/ArtExpander/ArtExpander.dll"
 ZIP_NAME="ArtExpander.zip"
 MOD_FOLDER="$SCRIPT_DIR/BepInEx"
 DESTINATION_PATH="$SCRIPT_DIR/ArtExpander.zip"
@@ -62,7 +62,7 @@ fi
 
 # Check Steam directory exists and is accessible
 echo "[INFO] Checking Steam directory..."
-STEAM_GAME_DIR="/home/$CURRENT_USER/.steam/debian-installation/steamapps/common/TCG Card Shop Simulator"
+STEAM_GAME_DIR="/home/$CURRENT_USER/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/TCG Card Shop Simulator"
 if [ ! -d "$STEAM_GAME_DIR" ]; then
     echo "[WARNING] Steam game directory not found. Is the game installed?"
     read -p "Do you want to continue without copying to Steam directory? (y/N): " choice
@@ -71,7 +71,7 @@ if [ ! -d "$STEAM_GAME_DIR" ]; then
         * ) exit 1;;
     esac
 else
-    # Copy DLL to Steam folder with enhanced error checking
+    # Copy DLL to Steam folder with error checking
     echo "[INFO] Copying to Steam folder..."
     cp "$SOURCE_DLL" "$STEAM_PLUGINS"
     if [ $? -ne 0 ]; then

@@ -49,12 +49,13 @@ namespace ArtExpander
 
             PluginPath = Path.GetDirectoryName(Info.Location);
             Logger.LogDebug($"Art Expander starting! Plugin path: {PluginPath}");
-            
-            string cardArtPath = Path.Combine(PluginPath, "cardart");
+
+
+            // Initialize Animations
             if (EnableAnimations.Value)
             {
                 //needs a reference to a monobehavior so it can launch coroutines, coroutines are so it can load frames asynchronously when ready
-                animated_ghost_cache = new AnimationCache(this); 
+                animated_ghost_cache = new AnimationCache(this);
                 string animatedGhostPath = Path.Combine(PluginPath, "animated");
                 animated_ghost_cache.Initialize(animatedGhostPath);
             }
@@ -64,37 +65,17 @@ namespace ArtExpander
             }
 
             // Initialize bundle cache (loads from cardart.assets if it exists)
+            string cardArtPath = Path.Combine(PluginPath, "cardart");
             string cardArtBundlePath = cardArtPath + ".assets";
-            if (File.Exists(cardArtBundlePath))
-            {
-                art_cache_bundle.Initialize(cardArtBundlePath);
-            }
-            else
-            {
-                Logger.LogInfo("No cardart.assets bundle found, skipping bundle cache");
-            }
-
-            // Initialize directory cache (loads from cardart/ folder)
-            if (Directory.Exists(cardArtPath))
-            {
-                art_cache_directory.Initialize(cardArtPath);
-            }
-            else
-            {
-                Logger.LogInfo("No cardart directory found, skipping directory cache");
-            }
-
+            art_cache_bundle.Initialize(cardArtBundlePath);
+            art_cache_directory.Initialize(cardArtPath);
+ 
             // Try foilmask.assets bundle first, fall back to foilmask/ directory
             string foilmaskBundlePath = Path.Combine(PluginPath, "foilmask.assets");
-            if (File.Exists(foilmaskBundlePath))
-            {
-                foilmask_cache.Initialize(foilmaskBundlePath);
-            }
-            else
-            {
-                string foilmaskPath = Path.Combine(PluginPath, "foilmask");
-                foilmask_cache.Initialize(foilmaskPath);
-            }
+            foilmask_cache.Initialize(foilmaskBundlePath);
+            string foilmaskPath = Path.Combine(PluginPath, "foilmask");
+            foilmask_cache.Initialize(foilmaskPath);
+        
             harmony.PatchAll();
             Logger.LogInfo("Patches applied!");
         }
