@@ -49,14 +49,6 @@ namespace ArtExpander.Patches
 
             try
             {
-                // Clean up existing animators first
-                var existingAnimators = targetCardUI.GetComponents<GhostCardAnimatedRenderer>();
-                foreach (var animator in existingAnimators)
-                {
-                    animator.StopAnimation();
-                    UnityEngine.Object.Destroy(animator);
-                }
-
                 // Get required Image references
                 Image mainImage = AccessTools.Field(typeof(CardUI), "m_CenterFrameImage").GetValue(targetCardUI) as Image;
 
@@ -85,8 +77,19 @@ namespace ArtExpander.Patches
                                     return;
                                 }
 
-                                var animator = targetCardUI.gameObject.AddComponent<GhostCardAnimatedRenderer>();
-                                animator.Initialize(mainImage, frames, Plugin.AnimationFPS.Value);
+                                // Try to reuse existing animator component (object pooling)
+                                var animator = targetCardUI.gameObject.GetComponent<GhostCardAnimatedRenderer>();
+                                if (animator != null)
+                                {
+                                    // Reuse existing component - avoids GC pressure from constant destroy/create
+                                    animator.Reinitialize(mainImage, frames, Plugin.AnimationFPS.Value);
+                                }
+                                else
+                                {
+                                    // Create new component only if none exists
+                                    animator = targetCardUI.gameObject.AddComponent<GhostCardAnimatedRenderer>();
+                                    animator.Initialize(mainImage, frames, Plugin.AnimationFPS.Value);
+                                }
                             }
                             catch (Exception ex)
                             {

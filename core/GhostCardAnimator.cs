@@ -43,6 +43,23 @@ namespace ArtExpander.Core
             isAnimating = true;
         }
 
+        /// <summary>
+        /// Reinitialize an existing animator with new frames - avoids component destruction/recreation.
+        /// Used for object pooling to reduce GC pressure when cards are frequently updated.
+        /// </summary>
+        public void Reinitialize(Image mainImage, Sprite[] frames, int fps)
+        {
+            StopAnimation();
+
+            this.mainImage = mainImage;
+            this.frames = frames;
+            this.frameDelay = 1f / fps;
+            this.frameTimer = 0f;
+            this.currentFrame = 0;
+
+            isAnimating = true;
+        }
+
         public void StopAnimation()
         {
             isAnimating = false;
