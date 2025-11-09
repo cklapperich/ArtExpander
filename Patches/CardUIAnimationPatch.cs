@@ -11,6 +11,10 @@ namespace ArtExpander.Patches
     {
         private static readonly string LOG_PREFIX = "[CardUIAnimationPatch] ";
 
+        // Cache reflection field lookup to avoid repeated reflection calls
+        private static readonly System.Reflection.FieldInfo m_CenterFrameImageField =
+            AccessTools.Field(typeof(CardUI), "m_CenterFrameImage");
+
         private static void LogError(string message, Exception ex = null)
         {
             Plugin.Logger.LogError($"{LOG_PREFIX}{message}" + (ex != null ? $"\nException: {ex}" : ""));
@@ -49,8 +53,8 @@ namespace ArtExpander.Patches
 
             try
             {
-                // Get required Image references
-                Image mainImage = AccessTools.Field(typeof(CardUI), "m_CenterFrameImage").GetValue(targetCardUI) as Image;
+                // Get required Image references using cached field
+                Image mainImage = m_CenterFrameImageField.GetValue(targetCardUI) as Image;
 
                 // Request animation from cache
                 try

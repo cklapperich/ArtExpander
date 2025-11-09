@@ -67,8 +67,7 @@ namespace ArtExpander.Core
 
         private void Update()
         {
-            // Only animate if we have frames and animation is enabled
-            if (!isAnimating || frames == null || frames.Length == 0 || mainImage == null)
+            if (!isAnimating)
                 return;
 
             frameTimer += Time.deltaTime;
