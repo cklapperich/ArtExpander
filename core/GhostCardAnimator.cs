@@ -1,39 +1,18 @@
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections;
 namespace ArtExpander.Core
 {
     public class GhostCardAnimatedRenderer : MonoBehaviour
     {
         private Image mainImage;
-        private Image maskImage;
         private Sprite[] frames;
-        private Coroutine animationCoroutine;
         private float frameDelay = 0.1f;
         private CardUI parentCardUI;
-        private bool wasAnimating = false;
-        private string componentId;
-        private bool pendingStart = false;
 
-        private void Awake()
-        {
-            componentId = System.Guid.NewGuid().ToString().Substring(0, 8);
-            // Plugin.Logger.LogInfo($"[Animation {componentId}] Awake Called\n" +
-            //     $"  GameObject Active: {gameObject.activeInHierarchy}\n" +
-            //     $"  Has Parent CardUI: {GetComponentInParent<CardUI>() != null}\n" + 
-            //     $"  Component Count: {gameObject.GetComponents<GhostCardAnimatedRenderer>().Length}");
-        }
-
-        private void LogAnimationState(string eventName)
-        {
-            // Plugin.Logger.LogInfo($"[Animation {componentId}] {eventName}\n" +
-            //     $"  HasFrames: {(frames != null ? frames.Length : 0)} frames\n" +
-            //     $"  HasCoroutine: {animationCoroutine != null}\n" +
-            //     $"  WasAnimating: {wasAnimating}\n" +
-            //     $"  PendingStart: {pendingStart}\n" +
-            //     $"  GameObject Active: {gameObject.activeInHierarchy}\n" +
-            //     $"  MainImage: {(mainImage?.sprite != null ? "Has Sprite" : "No Sprite")}");
-        }
+        // Animation state for Update() approach
+        private float frameTimer = 0f;
+        private int currentFrame = 0;
+        private bool isAnimating = false;
 
         public void Initialize(Image mainImage, Sprite[] frames, int fps)
         {
@@ -52,107 +31,59 @@ namespace ArtExpander.Core
                 }
             }
 
-            LogAnimationState("Initialize");
-
             this.mainImage = mainImage;
             this.frames = frames;
             this.frameDelay = 1f / fps;
-            this.pendingStart = false;
-                    
+            this.frameTimer = 0f;
+            this.currentFrame = 0;
+
             parentCardUI = GetComponentInParent<CardUI>();
-            
-            StopAnimation();
-            
-            // Don't try to start if inactive
-            if (gameObject.activeInHierarchy)
-            {
-                StartAnimation();
-            }
-            else
-            {
-                //Plugin.Logger.LogWarning($"[Animation {componentId}] GameObject inactive during Initialize, marking for pending start");
-                pendingStart = true;
-            }
-        }
 
-        public void StartAnimation()
-        {
-            LogAnimationState("StartAnimation Called");
-            
-            if (!gameObject.activeInHierarchy)
-            {
-                //Plugin.Logger.LogWarning($"[Animation {componentId}] Cannot start - GameObject inactive");
-                pendingStart = true;
-                return;
-            }
-            
-            if (frames == null || frames.Length == 0)
-            {
-                //Plugin.Logger.LogWarning($"[Animation {componentId}] Cannot start - no frames");
-                return;
-            }
-            if (animationCoroutine != null)
-            {
-                //Plugin.Logger.LogWarning($"[Animation {componentId}] Cannot start - already running");
-                return;
-            }
-
-            pendingStart = false;
-            animationCoroutine = StartCoroutine(AnimateSprites());
-            LogAnimationState("Animation Started");
+            // Just enable animation - Update() will handle the rest
+            isAnimating = true;
         }
 
         public void StopAnimation()
-        {   
-            LogAnimationState("StopAnimation Called");
-
-            if (animationCoroutine != null)
-            {
-                StopCoroutine(animationCoroutine);
-                animationCoroutine = null;
-                LogAnimationState("Animation Stopped");
-            }
+        {
+            isAnimating = false;
         }
 
-        private IEnumerator AnimateSprites()
+        private void Update()
         {
-            LogAnimationState("Animation Coroutine Started");
-            int currentFrame = 0;
-            
-            while (true) {
+            // Only animate if we have frames and animation is enabled
+            if (!isAnimating || frames == null || frames.Length == 0 || mainImage == null)
+                return;
+
+            frameTimer += Time.deltaTime;
+
+            if (frameTimer >= frameDelay)
+            {
+                // Keep the remainder for precise timing
+                frameTimer -= frameDelay;
+
+                // Update sprite
                 mainImage.sprite = frames[currentFrame];
+
+                // Advance to next frame
                 currentFrame = (currentFrame + 1) % frames.Length;
-                yield return new WaitForSeconds(frameDelay);
             }
         }
 
         private void OnDisable()
         {
-            LogAnimationState("OnDisable");
-            wasAnimating = (animationCoroutine != null);
-            StopAnimation();
+            // Animation automatically stops when disabled (Update won't run)
+            // We keep isAnimating true so it resumes on enable without resetting
         }
 
         private void OnEnable()
         {
-            LogAnimationState("OnEnable");
-            if (wasAnimating || pendingStart)
-            {
-                StartAnimation();
-            }
+            // Animation automatically resumes when enabled (Update will run again)
+            // Continues from wherever it left off - no reset needed
         }
 
         private void OnDestroy()
         {
-            LogAnimationState("OnDestroy");
-            StopAnimation();
-        }
-
-        public void ResetAnimation()
-        {
-            LogAnimationState("ResetAnimation Called");
-            StopAnimation();
-            StartAnimation();
+            isAnimating = false;
         }
     }
 }
