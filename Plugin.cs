@@ -13,7 +13,7 @@ namespace ArtExpander
     [BepInDependency("shaklin.TextureReplacer", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
-        internal static AnimationCache animated_ghost_cache;
+        internal static AnimationCache animated_cache;
         internal static new ManualLogSource Logger;
         private readonly Harmony harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         internal static string PluginPath;
@@ -51,26 +51,24 @@ namespace ArtExpander
             Logger.LogDebug($"Art Expander starting! Plugin path: {PluginPath}");
 
 
-            // Initialize Animations
             if (EnableAnimations.Value)
             {
-                //needs a reference to a monobehavior so it can launch coroutines, coroutines are so it can load frames asynchronously when ready
-                animated_ghost_cache = new AnimationCache(this);
-                string animatedGhostPath = Path.Combine(PluginPath, "animated");
-                animated_ghost_cache.Initialize(animatedGhostPath);
+                animated_cache = new AnimationCache(this);
+                string animatedBundlePath = Path.Combine(PluginPath, "animated.assets");
+                animated_cache.Initialize(animatedBundlePath);
+                string animatedPath = Path.Combine(PluginPath, "animated");
+                animated_cache.Initialize(animatedPath);
             }
             else
             {
                 Logger.LogInfo("Animations disabled in config - skipping animation loading");
             }
 
-            // Initialize bundle cache (loads from cardart.assets if it exists)
             string cardArtPath = Path.Combine(PluginPath, "cardart");
             string cardArtBundlePath = cardArtPath + ".assets";
             art_cache_bundle.Initialize(cardArtBundlePath);
             art_cache_directory.Initialize(cardArtPath);
- 
-            // Try foilmask.assets bundle first, fall back to foilmask/ directory
+
             string foilmaskBundlePath = Path.Combine(PluginPath, "foilmask.assets");
             foilmask_cache.Initialize(foilmaskBundlePath);
             string foilmaskPath = Path.Combine(PluginPath, "foilmask");

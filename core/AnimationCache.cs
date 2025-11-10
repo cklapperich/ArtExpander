@@ -4,17 +4,13 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 using ArtExpander.Core;
-//TODO: ADD CODE FOR UNITY ASYNC ASSET LOADING
-//TODO: TEXTURE COMPRESSION? IF TEXTURES ARE MULTIPLES OF 4 ON THE DIMENSION BUT
-// COULD INCREASE CPU USAGE!!
+
 namespace ArtExpander.Core
 {
-    public class AnimationCache 
+    public class AnimationCache
     {
-        // Cache for animation frame paths, keyed by card properties
-        private readonly Dictionary<(EMonsterType monsterType, ECardBorderType BorderType, ECardExpansionType ExpansionType, bool IsFoil), List<string>> _animationFilePaths 
+        private readonly Dictionary<(EMonsterType monsterType, ECardBorderType BorderType, ECardExpansionType ExpansionType, bool IsFoil), List<string>> _animationFilePaths
             = new Dictionary<(EMonsterType monsterType, ECardBorderType BorderType, ECardExpansionType ExpansionType, bool IsFoil), List<string>>();
-            // Cache for loaded sprite arrays, keyed by the folder path containing the animation frames
         private readonly Dictionary<string, Sprite[]> _loadedAnimations = new Dictionary<string, Sprite[]>();
         private AssetBundle _animationsBundle;
         private AssetBundleLoader _bundleLoader;
@@ -47,10 +43,8 @@ namespace ArtExpander.Core
 
         public void Initialize(string rootPath)
         {
-            // Try bundle first: animated.assets in parent directory
             string bundlePath = rootPath + ".assets";
 
-            // Initialize the bundle loader
             _bundleLoader = new AssetBundleLoader(bundlePath);
             if (_bundleLoader.IsUsingBundle)
             {
@@ -58,22 +52,17 @@ namespace ArtExpander.Core
             }
             else
             {
-                // Verify root path exists
                 if (!Directory.Exists(rootPath))
                 {
                     Plugin.Logger.LogInfo($"Directory does not exist at {rootPath}. failed to initialize AnimationCache");
                     return;
                 }
-                // Fall back to directory: pass rootPath to AssetBundleLoader for file loading
                 ScanAnimationPaths(Directory.GetFiles(rootPath, "*.png", SearchOption.AllDirectories));
             }
         }
 
         private void ScanAnimationPaths(IEnumerable<string> paths)
         {
-            _animationFilePaths.Clear();
-
-            // Filter for PNG files if not already filtered
             var pngPaths = paths.Where(path => path.EndsWith(".png", StringComparison.OrdinalIgnoreCase));
 
             // Group files by their directory to handle multiple animations
@@ -123,6 +112,7 @@ namespace ArtExpander.Core
                     return int.TryParse(filename, out int frameNum) ? frameNum : int.MaxValue;
                 }).ToList();
 
+                // Always set/overwrite - allows directory files to override bundle entries
                 _animationFilePaths[cacheKey] = sortedFrames;
             }
 
@@ -132,7 +122,6 @@ namespace ArtExpander.Core
      public bool RequestAnimationForCard(EMonsterType monsterType, ECardBorderType borderType,
         ECardExpansionType expansionType, bool isBlackGhost, bool isFoil, Action<Sprite[]> onFramesReady)
     {
-        // Get the list of frame paths for this card variant
         List<string> framePaths = CardAssetResolver.ResolvePathFromCardInfo(
             _animationFilePaths,
             monsterType,
@@ -147,15 +136,13 @@ namespace ArtExpander.Core
         }
 
         string directoryPath = Path.GetDirectoryName(framePaths[0]);
-        
-        // Check if animation is already loaded
+
         if (_loadedAnimations.TryGetValue(directoryPath, out var loadedFrames))
         {
             onFramesReady(loadedFrames);
             return true;
         }
 
-        // Start async loading if not cached
         _coroutineRunner.StartCoroutine(LoadFramesCoroutine(framePaths, directoryPath, onFramesReady));
         return true;
     }

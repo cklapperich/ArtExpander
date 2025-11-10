@@ -47,19 +47,16 @@ namespace ArtExpander.Patches
             if (targetCardUI == null)
                 return;
 
-            // Check if animation cache is initialized
-            if (Plugin.animated_ghost_cache == null)
+            if (Plugin.animated_cache == null)
                 return;
 
             try
             {
-                // Get required Image references using cached field
                 Image mainImage = m_CenterFrameImageField.GetValue(targetCardUI) as Image;
 
-                // Request animation from cache
                 try
                 {
-                    bool loaded_frames = Plugin.animated_ghost_cache.RequestAnimationForCard(
+                    bool loaded_frames = Plugin.animated_cache.RequestAnimationForCard(
                         monsterType: monsterType,
                         borderType: borderType,
                         expansionType: expansionType,
